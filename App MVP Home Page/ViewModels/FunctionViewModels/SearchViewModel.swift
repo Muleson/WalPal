@@ -48,14 +48,12 @@ class SearchViewModel: ObservableObject {
         case user(User)
         case beta(BetaPost)
         case event(EventPost)
-        case visit(GroupVisit)
         
         var id: String {
             switch self {
             case .user(let user): return "user-\(user.id)"
             case .beta(let beta): return "beta-\(beta.id)"
             case .event(let event): return "event-\(event.id)"
-            case .visit(let visit): return "visit-\(visit.id)"
             }
         }
     }
@@ -140,13 +138,6 @@ class SearchViewModel: ObservableObject {
                     event.location.lowercased().contains(normalizedQuery) ||
                     event.gym?.name.lowercased().contains(normalizedQuery) ?? false) {
                     results.append(.event(event))
-                }
-                
-            case let visit as GroupVisit:
-                if (selectedFilter == .all || selectedFilter == .visits) &&
-                   (visit.description?.lowercased().contains(normalizedQuery) ?? false ||
-                    visit.gym.name.lowercased().contains(normalizedQuery)) {
-                    results.append(.visit(visit))
                 }
                 
             case let basic as BasicPost:

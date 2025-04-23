@@ -105,33 +105,6 @@ class ActivityRepositoryService {
         return newPost
     }
 
-    func createVisit(
-        author: User,
-        gym: Gym,
-        visitDate: Date,
-        duration: TimeInterval,
-        description: String? = nil,
-        isFeatured: Bool = false
-    ) async throws -> GroupVisit {
-        let newVisit = GroupVisit(
-            id: UUID().uuidString,
-            author: author,
-            createdAt: Date(),
-            likeCount: 0,
-            commentCount: 0,
-            gym: gym,
-            visitDate: visitDate,
-            duration: duration,
-            description: description,
-            attendees: [author.id],
-            status: .planned,
-            isFeatured: isFeatured
-        )
-        
-        try await db.collection("activityItems").document(newVisit.id).setData(newVisit.toFirestoreData())
-        
-        return newVisit
-    }
     
     // MARK: - Fetch Methods
     
@@ -229,10 +202,6 @@ class ActivityRepositoryService {
                         } else if typeString == "event" {
                             if let eventPost = EventPost(firestoreData: data, author: author, gym: gym) {
                                 activityItems.append(eventPost)
-                            }
-                        } else if typeString == "visit" {
-                            if let visit = GroupVisit(firestoreData: data, author: author, gym: gym) {
-                                activityItems.append(visit)
                             }
                         }
                     }
@@ -412,92 +381,6 @@ class ActivityRepositoryService {
             ])
         }
     }
-    
-    func updateVisitStatus(visitId: String, newStatus: GroupVisit.VisitStatus) async throws {
-        // Update the visit status
-        try await db.collection("activityItems").document(visitId).updateData([
-            "status": newStatus.rawValue
-        ])
-    }
-    
-    func fetchFriendsVisitsToday(userId: String) async throws -> [GymWithVisits] {
-        // Get the user's following list
-        let relationshipService = UserRelationshipService(userRepository: userRepository)
-        let following = try await relationshipService.getFollowing(userId: userId)
-        let followingIds = following.map { $0.id }
-        
-        if followingIds.isEmpty {
-            return []
-        }
-        
-        // Find visits for today from these users
-        let today = Calendar.current.startOfDay(for: Date())
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
-        
-        let snapshot = try await db.collection("activityItems")
-            .whereField("type", isEqualTo: "visit")
-            .whereField("authorId", in: followingIds)
-            .whereField("visitDate", isGreaterThanOrEqualTo: today.firestoreTimestamp)
-            .whereField("visitDate", isLessThan: tomorrow.firestoreTimestamp)
-            .getDocuments()
-        
-        // Process visits using the cached user data already fetched by relationshipService
-        let visits = try await processVisitDocuments(snapshot.documents)
-        
-        // Group by gym
-        let groupedByGym = Dictionary(grouping: visits) { visit in
-            return visit.gym.id
-        }
-        
-        // Convert to GymWithVisits array
-        return groupedByGym.map { gymId, visits in
-            let gym = visits.first!.gym
-            let visitorInfos = visits.map { visit in
-                VisitorInfo(user: visit.author, visitDate: visit.visitDate)
-            }
-            return GymWithVisits(gym: gym, visitors: visitorInfos)
-        }
-    }
-    
-    // Helper method to process visit documents and convert them to Visit objects
-    private func processVisitDocuments(_ documents: [QueryDocumentSnapshot]) async throws -> [GroupVisit] {
-            var visits: [GroupVisit] = []
-            
-            for document in documents {
-                let data = document.data()
-                
-                // Verify it's a visit
-                guard
-                    let typeString = data["type"] as? String,
-                    typeString == "visit",
-                    let authorId = data["authorId"] as? String,
-                    let gymId = data["gymId"] as? String
-                else { continue }
-                
-                // Use userRepository to get author
-                let author: User
-                do {
-                    author = try await userRepository.getUser(id: authorId)
-                } catch {
-                    print("Error fetching author for visit: \(error)")
-                    continue
-                }
-                
-                // Fetch the gym
-                let gymDoc = try await db.collection("gyms").document(gymId).getDocument()
-                guard
-                    gymDoc.exists,
-                    let gymData = gymDoc.data(),
-                    let gym = Gym(firestoreData: gymData)
-                else { continue }
-                
-                // Now we can try to create the Visit object
-                if let visit = GroupVisit(firestoreData: data, author: author, gym: gym) {
-                    visits.append(visit)
-                }
-            }
-            return visits
-        }
     
     // MARK: - Delete Methods
     
@@ -716,9 +599,6 @@ extension ActivityRepositoryService {
                 (eventPost.description?.lowercased().contains(normalizedQuery) ?? false) ||
                 eventPost.location.lowercased().contains(normalizedQuery) ||
                 (eventPost.gym?.name.lowercased().contains(normalizedQuery) ?? false)
-            } else if let visit = item as? GroupVisit {
-                return (visit.description?.lowercased().contains(normalizedQuery) ?? false) ||
-                visit.gym.name.lowercased().contains(normalizedQuery)
             }
             return false
         }
@@ -736,8 +616,6 @@ extension ActivityRepositoryService {
             if normalizedTag == "beta", item is BetaPost {
                 return true
             } else if normalizedTag == "event", item is EventPost {
-                return true
-            } else if normalizedTag == "visit", item is GroupVisit {
                 return true
             }
             return false

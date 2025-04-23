@@ -72,27 +72,3 @@ struct EventPost: ActivityItem {
         case id, author, title, description, mediaURL, createdAt, likeCount, commentCount, eventDate, location, maxAttendees, registered, gym, isFeatured
     }
 }
-
-// MARK: - Visit
-struct GroupVisit: ActivityItem {
-    let id: String
-    let author: User
-    let createdAt: Date
-    var likeCount: Int
-    var commentCount: Int
-    let gym: Gym
-    let visitDate: Date
-    let duration: TimeInterval
-    let description: String?
-    var attendees: [String] // User IDs
-    var status: VisitStatus
-    var isFeatured: Bool
-    
-    enum VisitStatus: String, Codable, CaseIterable {
-        case planned, ongoing, completed, cancelled
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case id, author, createdAt, likeCount, commentCount, gym, visitDate, duration, description, attendees, status, isFeatured
-    }
-}

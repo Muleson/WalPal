@@ -176,7 +176,6 @@ class HomeViewModel: ObservableObject {
             case is BasicPost: return "basic"
             case is BetaPost: return "beta"
             case is EventPost: return "event"
-            case is GroupVisit: return "visit"
             default: return "unknown"
         }
     }

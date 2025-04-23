@@ -137,7 +137,8 @@ class GymVisitRepository {
             guard let user = usersMap[visitor.userId] else { return nil }
             
             return UserVisit(
-                visitId: visitor.visitId ?? UUID().uuidString,
+                id: visitor.visitId ?? UUID().uuidString,
+                visitId: gymVisit.id,
                 user: user,
                 visitDate: visitor.visitTime
             )
@@ -148,9 +149,9 @@ class GymVisitRepository {
     func getGymsWithFriendsToday(userId: String) async throws -> [GymVisit] {
         // 1. Get the user's friend list (one query)
         let relationshipService = UserRelationshipService()
-        let friendIds = try await relationshipService.getFollowingIds(userId: userId)
+        let followingIds = try await relationshipService.getFollowingIds(userId: userId)
         
-        if friendIds.isEmpty {
+        if followingIds.isEmpty {
             return []
         }
         
@@ -172,7 +173,7 @@ class GymVisitRepository {
             
             // Filter visitors to just friends
             let friendVisitors = gymVisit.visitors.filter { visitor in
-                friendIds.contains(visitor.userId)
+                followingIds.contains(visitor.userId)
             }
             
             if !friendVisitors.isEmpty {
@@ -204,7 +205,8 @@ class GymVisitRepository {
                 guard let user = usersMap[visitor.userId] else { return nil }
                 
                 return UserVisit(
-                    visitId: visitor.visitId ?? UUID().uuidString,
+                    id: visitor.visitId ?? UUID().uuidString,
+                    visitId: gymId,
                     user: user,
                     visitDate: visitor.visitTime
                 )
@@ -215,9 +217,10 @@ class GymVisitRepository {
             }
             
             return GymVisit(
+                id: gymId,
                 gym: gym,
                 attendees: userVisits,
-                isFavourite: false // These are friend visits, not favorites
+                isFavourite: false // Friends' visits, not favorites
             )
         }
         .sorted { $0.attendees.count > $1.attendees.count }

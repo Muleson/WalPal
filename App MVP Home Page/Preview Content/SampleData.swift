@@ -188,29 +188,11 @@ struct SampleData {
         )
     }
     
-    static func createSampleVisit() -> GroupVisit {
-        return GroupVisit(
-            id: "preview-visit-1",
-            author: previewUsers[2],
-            createdAt: Date().addingTimeInterval(-3600 * 8), // 8 hours ago
-            likeCount: 5,
-            commentCount: 2,
-            gym: previewGyms[1],
-            visitDate: Date().addingTimeInterval(3600 * 24), // Tomorrow
-            duration: 7200, // 2 hours in seconds
-            description: "Looking for a climbing partner for a 2-hour session",
-            attendees: [previewUsers[2].id, previewUsers[0].id],
-            status: .planned,
-            isFeatured: false
-        )
-    }
-    
     static func createSampleActivityItems() -> [any ActivityItem] {
         return [
             createSampleBasicPost(),
             createSampleBetaPost(),
             createSampleEventPost(),
-            createSampleVisit()
         ]
     }
     
@@ -234,57 +216,6 @@ struct SampleData {
             content: "Looking forward to trying this beta tomorrow!",
             timeStamp: Date().addingTimeInterval(-600), // 10 minutes ago
             id: UUID()
-        )
-    ]
-    
-    // MARK: - Sample Gym Visits
-    
-    static func createSampleGymVisits() -> [GymWithVisits] {
-        return [
-            GymWithVisits(
-                gym: previewGyms[0],
-                visitors: [
-                    VisitorInfo(user: previewUsers[0], visitDate: Date().addingTimeInterval(3600 * 4)),
-                    VisitorInfo(user: previewUsers[1], visitDate: Date().addingTimeInterval(3600 * 6))
-                ]
-            ),
-            GymWithVisits(
-                gym: previewGyms[1],
-                visitors: [
-                    VisitorInfo(user: previewUsers[2], visitDate: Date().addingTimeInterval(3600 * 2))
-                ]
-            )
-        ]
-    }
-    
-    static let visitors = [
-        VisitorInfo(
-            user: User(
-                id: "user1",
-                email: "alice@example.com",
-                firstName: "Alice",
-                lastName: "Johnson",
-                bio: nil,
-                postCount: 15,
-                loggedHours: 75,
-                imageUrl: nil,
-                createdAt: Date()
-            ),
-            visitDate: Calendar.current.date(bySettingHour: 10, minute: 30, second: 0, of: Date())!
-        ),
-        VisitorInfo(
-            user: User(
-                id: "user2",
-                email: "bob@example.com",
-                firstName: "Bob",
-                lastName: "Smith",
-                bio: nil,
-                postCount: 8,
-                loggedHours: 42,
-                imageUrl: nil,
-                createdAt: Date()
-            ),
-            visitDate: Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: Date())!
         )
     ]
 }

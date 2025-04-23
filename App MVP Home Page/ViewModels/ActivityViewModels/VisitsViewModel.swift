@@ -8,7 +8,7 @@
 import Foundation
 
 class VisitsViewModel: ObservableObject {
-    @Published var gymVisits: [GymWithVisits] = []
+    @Published var gymVisits: [GymVisit] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -20,6 +20,7 @@ class VisitsViewModel: ObservableObject {
     @Published var selectedGymId = ""
     
     private let activityRepository = ActivityRepositoryService()
+    private let gymVisitsRepository = GymVisitRepository()
     private let userRepository = UserRepositoryService()
     
     // MARK: - Public Methods
@@ -30,7 +31,7 @@ class VisitsViewModel: ObservableObject {
         }
         
         do {
-            let visits = try await activityRepository.fetchFriendsVisitsToday(userId: userId)
+            let visits = try await gymVisitsRepository.getGymsWithFriendsToday(userId: userId)
             
             await MainActor.run {
                 self.gymVisits = visits

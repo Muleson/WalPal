@@ -12,7 +12,6 @@ enum ActivityType: String, CaseIterable {
     case basic = "Basic Post"
     case beta = "Beta"
     case event = "Event"
-    case visit = "Gym Visit"
 }
 
 class CreateActivityViewModel: ObservableObject {
@@ -36,11 +35,6 @@ class CreateActivityViewModel: ObservableObject {
     @Published var eventLocation = ""
     @Published var maxAttendees = 10
     
-    // Visit-specific properties
-    @Published var visitDate = Date()
-    @Published var visitDuration: Double = 2.0 // hours
-    @Published var visitDescription: String = ""
-    
     // Status properties
     @Published var isLoading = false
     @Published var showError = false
@@ -60,8 +54,6 @@ class CreateActivityViewModel: ObservableObject {
             return !content.isEmpty && !selectedGymId.isEmpty
         case .event:
             return !eventTitle.isEmpty && !eventLocation.isEmpty
-        case .visit:
-            return !selectedGymId.isEmpty && visitDuration > 0
         }
     }
     
@@ -81,8 +73,6 @@ class CreateActivityViewModel: ObservableObject {
                 try await createBetaPost(author: author)
             case .event:
                 try await createEventPost(author: author)
-            case .visit:
-                try await createVisit(author: author)
             }
             
             await MainActor.run {
@@ -141,26 +131,6 @@ class CreateActivityViewModel: ObservableObject {
             maxAttendees: maxAttendees,
             gym: gym,
             mediaURL: mediaURL
-        )
-    }
-    
-    private func createVisit(author: User) async throws {
-        // First, fetch the gym
-        let gymService = GymService()
-        guard let gym = try await gymService.fetchGym(id: selectedGymId) else {
-            throw NSError(
-                domain: "CreateActivityViewModel",
-                code: 404,
-                userInfo: [NSLocalizedDescriptionKey: "Selected gym not found"]
-            )
-        }
-        
-        _ = try await activityRepository.createVisit(
-            author: author,
-            gym: gym,
-            visitDate: visitDate,
-            duration: visitDuration * 3600, // Convert hours to seconds
-            description: visitDescription.isEmpty ? nil : visitDescription
         )
     }
     

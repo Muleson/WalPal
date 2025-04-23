@@ -11,8 +11,6 @@ enum FilterOption: String, CaseIterable, Identifiable {
     case all = "All"
     case beta = "Betas"
     case event = "Events"
-    case visit = "Visits"
-    
     var id: String { self.rawValue }
 }
 

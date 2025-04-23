@@ -133,7 +133,7 @@ class GymVisitViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Formatting Methods for UI
+    // MARK: - Helper Methods to format data for display
     
     /// Format the list of attendees for display
     func formatAttendeeList(_ attendees: [UserVisit]) -> String {
@@ -193,6 +193,7 @@ class GymVisitViewModel: ObservableObject {
             // Add to results even if no visitors (since it's a favorite gym)
             favoriteGymVisits.append(
                 GymVisit(
+                    id: gym.id,
                     gym: gym,
                     attendees: userVisits,
                     isFavourite: true
@@ -206,5 +207,27 @@ class GymVisitViewModel: ObservableObject {
     private func loadFriendVisitedGyms(userId: String) async throws -> [GymVisit] {
         // Load gyms where friends are visiting
         return try await gymVisitRepository.getGymsWithFriendsToday(userId: userId)
+    }
+    
+    // Helper methods for view binding
+    
+    /// Check if a user is an attendee of a gym visit
+    func isAttendee(userId: String, gymVisit: GymVisit) -> Bool {
+        return gymVisit.attendees.contains { $0.user.id == userId }
+    }
+    
+    /// Get a specific user's visit for a gym
+    func getUserVisit(userId: String, gymId: String) -> UserVisit? {
+        // Check favorite gyms first
+        if let gymVisit = favoriteGyms.first(where: { $0.gym.id == gymId }) {
+            return gymVisit.attendees.first { $0.user.id == userId }
+        }
+        
+        // Then check friend visited gyms
+        if let gymVisit = friendVisitedGyms.first(where: { $0.gym.id == gymId }) {
+            return gymVisit.attendees.first { $0.user.id == userId }
+        }
+        
+        return nil
     }
 }

@@ -106,13 +106,6 @@ struct GymProfileView: View {
                     ProfileView(appState: appState, profileUser: user)
                 }
             }
-            .navigationDestination(isPresented: $navigateToCreateVisit) {
-                CreateActivityView(
-                    appState: appState,
-                    initialType: ActivityType.visit,
-                    preselectedGym: viewModel.gym
-                )
-            }
             .navigationDestination(isPresented: $navigateToCreateBeta) {
                 CreateActivityView(
                     appState: appState,
@@ -194,7 +187,6 @@ struct GymProfileView: View {
             case is BasicPost: return "basic"
             case is BetaPost: return "beta"
             case is EventPost: return "event"
-            case is GroupVisit: return "visit"
             default: return "unknown"
         }
     }
@@ -207,8 +199,6 @@ struct GymProfileView: View {
             return .beta
         case .event:
             return .event
-        case .visit:
-            return .visit
         }
     }
     
@@ -220,21 +210,18 @@ struct GymProfileView: View {
             return .beta
         case .event:
             return .event
-        case .visit:
-            return .visit
         }
     }
 }
 
 enum GymActivityFilter {
-    case all, beta, event, visit
+    case all, beta, event
     
     var systemImage: String {
         switch self {
         case .all: return "list.bullet"
         case .beta: return "figure.climbing"
         case .event: return "calendar"
-        case .visit: return "person.3"
         }
     }
     
@@ -243,7 +230,6 @@ enum GymActivityFilter {
         case .all: return "No activity yet"
         case .beta: return "No beta posts yet"
         case .event: return "No events yet"
-        case .visit: return "No check-ins yet"
         }
     }
     
@@ -252,7 +238,6 @@ enum GymActivityFilter {
         case .all: return "Be the first to post in this gym"
         case .beta: return "Be the first to share beta for climbs at this gym"
         case .event: return "No upcoming events at this gym"
-        case .visit: return "No one has checked in to this gym recently"
         }
     }
 }

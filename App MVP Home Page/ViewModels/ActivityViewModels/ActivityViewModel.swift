@@ -45,8 +45,6 @@ class ActivityViewModel: ObservableObject {
             return activityItems.filter { $0 is BetaPost }
         case .event:
             return activityItems.filter { $0 is EventPost }
-        case .visit:
-            return activityItems.filter { $0 is GroupVisit }
         }
     }
     
@@ -176,47 +174,7 @@ class ActivityViewModel: ObservableObject {
             hasError = true
         }
     }
-    
-    // MARK: - Visit-Specific Methods
-    @MainActor
-    func joinVisit(visitId: String, userId: String) async {
-        do {
-            try await activityRepository.joinVisit(visitId: visitId, userId: userId)
-            
-            // Update local visit data
-            if let index = activityItems.firstIndex(where: { ($0 as? GroupVisit)?.id == visitId }) {
-                if var visit = activityItems[index] as? GroupVisit {
-                    if !visit.attendees.contains(userId) {
-                        visit.attendees.append(userId)
-                        activityItems[index] = visit
-                    }
-                }
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            hasError = true
-        }
-    }
-    
-    @MainActor
-    func leaveVisit(visitId: String, userId: String) async {
-        do {
-            try await activityRepository.leaveVisit(visitId: visitId, userId: userId)
-            
-            // Update local visit data
-            if let index = activityItems.firstIndex(where: { ($0 as? GroupVisit)?.id == visitId }) {
-                if var visit = activityItems[index] as? GroupVisit {
-                    if let attendeeIndex = visit.attendees.firstIndex(of: userId) {
-                        visit.attendees.remove(at: attendeeIndex)
-                        activityItems[index] = visit
-                    }
-                }
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            hasError = true
-        }
-    }
+
     
     // Delete an activity item
     @MainActor
@@ -274,14 +232,12 @@ class ActivityViewModel: ObservableObject {
         case all = "All"
         case beta = "Betas"
         case event = "Events"
-        case visit = "Visits"
         
         var systemImage: String {
             switch self {
             case .all: return "square.grid.2x2"
             case .beta: return "figure.climbing"
             case .event: return "calendar"
-            case .visit: return "mappin.and.ellipse"
             }
         }
     }

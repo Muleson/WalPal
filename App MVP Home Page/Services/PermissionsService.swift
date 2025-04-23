@@ -57,12 +57,6 @@ class PermissionsService {
             } catch {
                 return false
             }
-        } else if let visit = content as? GroupVisit {
-            do {
-                return try await canManageGym(user: user, gym: visit.gym)
-            } catch {
-                return false
-            }
         }
         
         return false
@@ -81,9 +75,6 @@ class PermissionsService {
             return role == .admin || role == .owner
         } else if let eventPost = content as? EventPost, let gym = eventPost.gym {
             let role = try? await getAdminRole(user: user, gym: gym)
-            return role == .admin || role == .owner
-        } else if let visit = content as? GroupVisit {
-            let role = try? await getAdminRole(user: user, gym: visit.gym)
             return role == .admin || role == .owner
         }
         

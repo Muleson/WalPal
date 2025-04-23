@@ -47,7 +47,6 @@ struct HomeView: View {
                             // Navigation link instead of a button with sheet
                             NavigationLink {
                                 // Navigate directly to CreateActivityView with initial type .visit
-                                CreateActivityView(appState: appState, initialType: .visit)
                             } label: {
                                 VStack {
                                     Text("Plan Send")
@@ -239,7 +238,6 @@ struct HomeView: View {
         case is BasicPost: return "basic"
         case is BetaPost: return "beta"
         case is EventPost: return "event"
-        case is GroupVisit: return "visit"
         default: return "unknown"
         }
     }

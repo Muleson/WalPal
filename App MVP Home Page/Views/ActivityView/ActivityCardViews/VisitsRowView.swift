@@ -8,148 +8,106 @@
 import SwiftUI
 
 struct GymVisitRow: View {
-    let gymVisit: GymWithVisits
+    let gymVisit: GymVisit
     let onTap: () -> Void
+    let onJoin: (() -> Void)?
+    let onLeave: (() -> Void)?
+    
+    @ObservedObject var viewModel: GymVisitViewModel
     
     var body: some View {
-        Button(action: onTap) {
+        VStack(spacing: 0) {
             HStack(spacing: 12) {
-                // Gym image
-                GymAvatarView(gym: gymVisit.gym, size: 50)
-                
-                // Gym info
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(gymVisit.gym.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.appTextPrimary)
+                // Left side: Gym logo with overlaid user avatars
+                ZStack {
+                    // Gym logo/image
+                    GymAvatarView(gym: gymVisit.gym, size: 60)
                     
-                    Text(gymVisit.gym.locaiton)
-                        .font(.caption)
-                        .foregroundColor(.appTextLight)
-                    
-                    // Friend avatars and count
-                    if !gymVisit.visitors.isEmpty {
-                        HStack(spacing: 4) {
-                            // First 3 friend avatars
-                            HStack(spacing: -8) {
-                                ForEach(Array(gymVisit.visitors.prefix(3).enumerated()), id: \.1.user.id) { index, visitor in
-                                    VisitorAvatarView(visitor: visitor.user, size: 20)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(Color.white, lineWidth: 1)
-                                        )
-                                }
-                            }
+                    // Attendee avatars in quarter circle formation
+                    ZStack {
+                        ForEach(0..<min(3, gymVisit.attendees.count), id: \.self) { index in
+                            let userVisit = gymVisit.attendees[index]
+                            let angle = Double(index) * (Double.pi / 4)
+                            let radius: CGFloat = 16
                             
-                            // Friend count label
-                            if !gymVisit.visitors.isEmpty {
-                                Text("\(gymVisit.visitors.count) \(gymVisit.visitors.count == 1 ? "friend" : "friends")")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                            // Position from angle
+                            let xOffset = radius * cos(angle)
+                            let yOffset = radius * sin(angle)
+                            
+                            // User avatar
+                            VisitorAvatarView(visitor: userVisit.user, size: 24)
                         }
+                    }
+                    .frame(width: 60, height: 60)
+                    .offset(x: 15, y: 15)
+                }
+                .frame(width: 60, height: 60)
+                
+                // Middle: Text content
+                VStack(alignment: .leading, spacing: 4) {
+                    // Gym name as headline
+                    Text(gymVisit.gym.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                    
+                    // Attendee names
+                    if !gymVisit.attendees.isEmpty {
+                        Text(viewModel.formatAttendeeList(gymVisit.attendees))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    } else {
+                        Text("No attendees yet")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
                 
                 Spacer()
                 
-                // Right chevron icon
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                // Right side: Date and Action
+                VStack(alignment: .trailing, spacing: 4) {
+                    // Get the representative date
+                    let visitDate = gymVisit.attendees.first?.visitDate ?? Date()
+                    
+                    Text(viewModel.formatVisitDay(visitDate))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    // Conditional Join/Leave button
+                    if let onLeave = onLeave {
+                        Button(action: onLeave) {
+                            Text("Leave")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(Color.gray.opacity(0.2))
+                                .foregroundColor(.primary)
+                                .clipShape(Capsule())
+                        }
+                    } else if let onJoin = onJoin {
+                        Button(action: onJoin) {
+                            Text("Join")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.appButton)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                .frame(width: 80) // Fixed width for consistency
+            }
+            .padding()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onTap()
             }
         }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct GymVisitRow_Previews: PreviewProvider {
-    static var previews: some View {
-        // Sample gym
-        let gym = Gym(
-            id: "gym1",
-            email: "info@boulderhub.com",
-            name: "Boulder Hub",
-            description: "Premier bouldering gym",
-            locaiton: "Downtown",
-            climbingType: [.bouldering],
-            amenities: ["Showers", "Cafe"],
-            events: [],
-            imageUrl: nil,
-            createdAt: Date()
-        )
-        
-        // Sample visitors
-        let visitors = [
-            VisitorInfo(
-                user: User(
-                    id: "user1",
-                    email: "alice@example.com",
-                    firstName: "Alice",
-                    lastName: "Johnson",
-                    bio: nil,
-                    postCount: 15,
-                    loggedHours: 75,
-                    imageUrl: nil,
-                    createdAt: Date()
-                ),
-                visitDate: Calendar.current.date(bySettingHour: 10, minute: 30, second: 0, of: Date())!
-            ),
-            VisitorInfo(
-                user: User(
-                    id: "user2",
-                    email: "bob@example.com",
-                    firstName: "Bob",
-                    lastName: "Smith",
-                    bio: nil,
-                    postCount: 8,
-                    loggedHours: 42,
-                    imageUrl: nil,
-                    createdAt: Date()
-                ),
-                visitDate: Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: Date())!
-            )
-        ]
-        
-        // Create sample data
-        let gymVisit = GymWithVisits(gym: gym, visitors: visitors)
-        
-        return VStack(spacing: 20) {
-            GymVisitRow(
-                gymVisit: gymVisit,
-                onTap: {}
-            )
-            .padding()
-            .background(Color.white)
-            .cornerRadius(10)
-            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-            
-            GymVisitRow(
-                gymVisit: GymWithVisits(
-                    gym: gym,
-                    visitors: [visitors[0]] // Just one visitor
-                ),
-                onTap: {}
-            )
-            .padding()
-            .background(Color.white)
-            .cornerRadius(10)
-            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-            
-            GymVisitRow(
-                gymVisit: GymWithVisits(
-                    gym: gym,
-                    visitors: [] // No visitors
-                ),
-                onTap: {}
-            )
-            .padding()
-            .background(Color.white)
-            .cornerRadius(10)
-            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-        }
-        .padding()
-        .background(Color(.systemGroupedBackground))
+        .background(Color.white)
+        .cornerRadius(12)
     }
 }

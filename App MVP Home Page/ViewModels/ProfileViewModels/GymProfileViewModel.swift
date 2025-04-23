@@ -75,8 +75,6 @@ class GymProfileViewModel: ObservableObject {
             filteredActivities = activities.filter { $0 is BetaPost }
         case .event:
             filteredActivities = activities.filter { $0 is EventPost }
-        case .visit:
-            filteredActivities = activities.filter { $0 is GroupVisit }
         }
     }
     
@@ -138,31 +136,7 @@ class GymProfileViewModel: ObservableObject {
             hasError = true
         }
     }
-    
-    func joinVisit(visitId: String, userId: String) async {
-        do {
-            try await activityRepository.joinVisit(visitId: visitId, userId: userId)
-            
-            // Update local data
-            updateVisitAttendee(visitId: visitId, userId: userId, isJoining: true)
-        } catch {
-            errorMessage = error.localizedDescription
-            hasError = true
-        }
-    }
-    
-    func leaveVisit(visitId: String, userId: String) async {
-        do {
-            try await activityRepository.leaveVisit(visitId: visitId, userId: userId)
-            
-            // Update local data
-            updateVisitAttendee(visitId: visitId, userId: userId, isJoining: false)
-        } catch {
-            errorMessage = error.localizedDescription
-            hasError = true
-        }
-    }
-    
+        
     func shareGym() {
         // In a real app, this would use the system share sheet
         // For now, just print that we're sharing
@@ -318,48 +292,6 @@ class GymProfileViewModel: ObservableObject {
                     updatedItem.likeCount = max(0, updatedItem.likeCount - 1)
                 }
                 filteredActivities[i] = updatedItem
-                break
-            }
-        }
-    }
-    
-    private func updateVisitAttendee(visitId: String, userId: String, isJoining: Bool) {
-        // Update in activities array
-        for i in 0..<activities.count {
-            if let visit = activities[i] as? GroupVisit, visit.id == visitId {
-                var updatedVisit = visit
-                
-                if isJoining {
-                    // Only add if not already attending
-                    if !updatedVisit.attendees.contains(userId) {
-                        updatedVisit.attendees.append(userId)
-                    }
-                } else {
-                    // Remove if attending
-                    updatedVisit.attendees.removeAll { $0 == userId }
-                }
-                
-                activities[i] = updatedVisit
-                break
-            }
-        }
-        
-        // Update in filtered activities array
-        for i in 0..<filteredActivities.count {
-            if let visit = filteredActivities[i] as? GroupVisit, visit.id == visitId {
-                var updatedVisit = visit
-                
-                if isJoining {
-                    // Only add if not already attending
-                    if !updatedVisit.attendees.contains(userId) {
-                        updatedVisit.attendees.append(userId)
-                    }
-                } else {
-                    // Remove if attending
-                    updatedVisit.attendees.removeAll { $0 == userId }
-                }
-                
-                filteredActivities[i] = updatedVisit
                 break
             }
         }

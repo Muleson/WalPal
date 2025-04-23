@@ -41,3 +41,12 @@ enum ClimbingTypes: String, Codable, CaseIterable {
     case lead
     case topRope
 }
+
+struct GymFavorite: Identifiable, Codable, Equatable {
+    let userId: String
+    let gymId: String
+    
+    var id: String {
+        return "\(userId)-\(gymId)"
+    }
+}

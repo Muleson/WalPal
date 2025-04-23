@@ -255,23 +255,6 @@ struct SearchView: View {
                     .fill(Color.white)
                     .shadow(radius: 2)
             )
-            
-        case .visit(let visit):
-            GroupVisitView(
-                visit: visit,
-                isLiked: false, // You would need to check this from a service
-                onLike: {}, // Implement these handlers
-                onComment: { showCommentsForItem(visit) },
-                onDelete: nil,
-                onJoin: { /* Implement this */ },
-                onLeave: nil,
-                onAuthorTapped: { navigateToUserProfile = $0 }
-            )
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white)
-                    .shadow(radius: 2)
-            )
         }
     }
     
@@ -333,7 +316,6 @@ struct SearchView: View {
         case is BasicPost: return "basic"
         case is BetaPost: return "beta"
         case is EventPost: return "event"
-        case is GroupVisit: return "visit"
         default: return "unknown"
         }
     }

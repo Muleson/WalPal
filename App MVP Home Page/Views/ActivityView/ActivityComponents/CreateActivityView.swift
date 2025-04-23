@@ -45,8 +45,6 @@ struct CreateActivityView: View {
                     betaPostSection
                 case .event:
                     eventPostSection
-                case .visit:
-                    visitSection
                 }
             }
             .navigationTitle("Share \(viewModel.selectedType.rawValue)")
@@ -130,25 +128,6 @@ struct CreateActivityView: View {
             mediaSelector
             
             gymSelector
-        }
-    }
-    
-    private var visitSection: some View {
-        Section {
-            DatePicker("Visit Date", selection: $viewModel.visitDate)
-            
-            Stepper(value: $viewModel.visitDuration, in: 0.5...8.0, step: 0.5) {
-                Text("Duration: \(formatDuration(viewModel.visitDuration))")
-            }
-            
-            TextField("Description (optional)", text: $viewModel.visitDescription, axis: .vertical)
-                .lineLimit(3...6)
-            
-            gymSelector
-        } header: {
-            Text("Visit Details")
-        } footer: {
-            Text("Share your plans to visit a climbing gym")
         }
     }
     

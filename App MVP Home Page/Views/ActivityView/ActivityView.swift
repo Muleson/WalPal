@@ -298,17 +298,6 @@ struct ActivityView: View {
                     onDelete: isAuthor(of: eventPost) ? { deleteItem(id: eventPost.id) } : nil,
                     onAuthorTapped: { user in navigateToUserProfile = user; showingProfile = true }
                 )
-            } else if let visit = item as? GroupVisit {
-                GroupVisitView(
-                    visit: visit,
-                    isLiked: viewModel.isItemLiked(itemId: visit.id),
-                    onLike: { toggleLike(itemId: visit.id) },
-                    onComment: { showCommentsForItem(visit) },
-                    onDelete: isAuthor(of: visit) ? { deleteItem(id: visit.id) } : nil,
-                    onJoin: isAttending(visit: visit) ? nil : { joinVisit(id: visit.id) },
-                    onLeave: isAttending(visit: visit) ? { leaveVisit(id: visit.id) } : nil,
-                    onAuthorTapped: { user in navigateToUserProfile = user; showingProfile = true }
-                )
             }
         }
         .background(
@@ -338,30 +327,9 @@ struct ActivityView: View {
         }
     }
     
-    private func joinVisit(id: String) {
-        guard let user = appState.user else { return }
-        
-        Task {
-            await viewModel.joinVisit(visitId: id, userId: user.id)
-        }
-    }
-    
-    private func leaveVisit(id: String) {
-        guard let user = appState.user else { return }
-        
-        Task {
-            await viewModel.leaveVisit(visitId: id, userId: user.id)
-        }
-    }
-    
     private func isAuthor(of item: any ActivityItem) -> Bool {
         guard let user = appState.user else { return false }
         return item.author.id == user.id
-    }
-    
-    private func isAttending(visit: GroupVisit) -> Bool {
-        guard let user = appState.user else { return false }
-        return visit.attendees.contains(user.id)
     }
     
     private func showCommentsForItem(_ item: any ActivityItem) {
@@ -374,7 +342,6 @@ struct ActivityView: View {
             case is BasicPost: return "basic"
             case is BetaPost: return "beta"
             case is EventPost: return "event"
-            case is GroupVisit: return "visit"
             default: return "unknown"
         }
     }
@@ -388,8 +355,6 @@ struct ActivityView: View {
             return .beta
         case .event:
             return .event
-        case .visit:
-            return .visit
         }
     }
     
@@ -402,8 +367,6 @@ struct ActivityView: View {
             return .beta
         case .event:
             return .event
-        case .visit:
-            return .visit
         }
     }
     
@@ -415,8 +378,6 @@ struct ActivityView: View {
             return .beta
         case .event:
             return .event
-        case .visit:
-            return .visit
         }
     }
 }

@@ -408,17 +408,6 @@ struct ProfileView: View {
                     onDelete: isAuthor(of: eventPost) ? { deleteItem(id: eventPost.id) } : nil,
                     onAuthorTapped: { user in navigateToProfile(user) }
                 )
-            } else if let visit = item as? GroupVisit {
-                GroupVisitView(
-                    visit: visit,
-                    isLiked: viewModel.isItemLiked(itemId: visit.id),
-                    onLike: { toggleLike(itemId: visit.id) },
-                    onComment: { showCommentsForItem(visit) },
-                    onDelete: isAuthor(of: visit) ? { deleteItem(id: visit.id) } : nil,
-                    onJoin: isAttending(visit: visit) ? nil : { joinVisit(id: visit.id) },
-                    onLeave: isAttending(visit: visit) ? { leaveVisit(id: visit.id) } : nil,
-                    onAuthorTapped: { user in navigateToProfile(user) }
-                )
             }
         }
         .background(
@@ -472,11 +461,6 @@ struct ProfileView: View {
         return item.author.id == user.id
     }
     
-    private func isAttending(visit: GroupVisit) -> Bool {
-        guard let user = appState.user else { return false }
-        return visit.attendees.contains(user.id)
-    }
-    
     private func showCommentsForItem(_ item: any ActivityItem) {
         selectedItemForComments = item
         showingComments = true
@@ -487,7 +471,6 @@ struct ProfileView: View {
             case is BasicPost: return "basic"
             case is BetaPost: return "beta"
             case is EventPost: return "event"
-            case is GroupVisit: return "visit"
             default: return "unknown"
         }
     }
