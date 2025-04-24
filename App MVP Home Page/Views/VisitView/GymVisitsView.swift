@@ -17,7 +17,7 @@ struct GymVisitsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Featured visits section (full cards for user's favorite gyms)
+                // Featured visits section (using rows instead of full cards for favorite gyms)
                 if !visitViewModel.favoriteGyms.isEmpty {
                     Text("Your Favorite Gyms")
                         .font(.title2)
@@ -25,21 +25,23 @@ struct GymVisitsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                     
-                    ForEach(visitViewModel.favoriteGyms) { gymVisit in
-                        GymVisitCard(
-                            gymVisit: gymVisit,
-                            onJoin: {
-                                joinGym(gymId: gymVisit.gym.id)
-                            },
-                            onLeave: visitViewModel.isAttendee(userId: appState.user?.id ?? "", gymVisit: gymVisit) ? {
-                                leaveGym(gymId: gymVisit.gym.id)
-                            } : nil,
-                            viewModel: visitViewModel
-                        )
-                        .padding(.horizontal)
-                        .onTapGesture {
-                            selectedGym = gymVisit
-                            showGymDetail = true
+                    VStack(spacing: 8) {
+                        ForEach(visitViewModel.favoriteGyms) { gymVisit in
+                            GymVisitRow(
+                                gymVisit: gymVisit,
+                                onTap: {
+                                    selectedGym = gymVisit
+                                    showGymDetail = true
+                                },
+                                onJoin: visitViewModel.isAttendee(userId: appState.user?.id ?? "", gymVisit: gymVisit) ? nil : {
+                                    joinGym(gymId: gymVisit.gym.id)
+                                },
+                                onLeave: visitViewModel.isAttendee(userId: appState.user?.id ?? "", gymVisit: gymVisit) ? {
+                                    leaveGym(gymId: gymVisit.gym.id)
+                                } : nil,
+                                viewModel: visitViewModel
+                            )
+                            .padding(.horizontal)
                         }
                     }
                 }

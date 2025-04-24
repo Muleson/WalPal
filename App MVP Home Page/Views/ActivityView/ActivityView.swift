@@ -14,6 +14,7 @@ struct ActivityView: View {
     
     @ObservedObject var appState: AppState
     @StateObject private var viewModel = ActivityViewModel()
+    @StateObject private var gymVisitViewModel = GymVisitViewModel()
     
     // UI state
     @State private var showingComments = false
@@ -29,6 +30,34 @@ struct ActivityView: View {
     @State private var isSearchActive = false
     @State private var navigateToSearch = false
     
+    // Gym visit state
+    @State private var selectedGym: GymVisit? = nil
+    @State private var showGymDetail = false
+    
+    // Computed property for dynamic title based on selected filter
+    private var dynamicTitle: some View {
+        let title: String
+        switch currentFilterOption {
+        case .all: title = "Activity"
+        case .beta: title = "Betas"
+        case .event: title = "Events"
+        case .gymVisits: title = "Gym Visits"
+        }
+        
+        return Text(title)
+            .font(.largeTitle)
+            .fontWeight(.bold)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .transition(.opacity.combined(with: .move(edge: .leading)))
+            .id("title-\(currentFilterOption)")  // Force SwiftUI to recreate the view when filter changes
+    }
+    
+    // Helper computed property to get current filter as FilterOption
+    private var currentFilterOption: FilterOption {
+        return mapActivityFilterToFilterOption(viewModel.selectedFilter)
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -37,24 +66,46 @@ struct ActivityView: View {
                     
                     Spacer().frame(height: 36)
                     
-                    // Title that would normally be in navigationTitle
-                    Text("Activity")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
+                    // Dynamic title that changes based on filter
+                    dynamicTitle
+                        .animation(.easeOut, value: currentFilterOption)
                     
                     // Filter tabs
                     UnderlineFilterTabs(
                         selectedFilter: Binding(
-                            get: { mapActivityFilterToFilterOption(viewModel.selectedFilter) },
-                            set: {
-                                let newFilter = mapFilterOptionToActivityFilter($0)
-                                viewModel.selectedFilter = newFilter
+                            get: { currentFilterOption },
+                            set: { newFilter in
+                                // Always animate filter transitions
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    // If switching away from gym visits
+                                    if currentFilterOption == .gymVisits && newFilter != .gymVisits {
+                                        // Reset the previousFilter state
+                                        previousFilter = newFilter
+                                    }
+                                    
+                                    // If switching to gym visits
+                                    if newFilter == .gymVisits && currentFilterOption != .gymVisits {
+                                        // Store that we've switched to gym visits
+                                        previousFilter = .gymVisits
+                                    }
+                                    
+                                    let activityFilter = mapFilterOptionToActivityFilter(newFilter)
+                                    viewModel.selectedFilter = activityFilter
+                                }
                                 
-                                // When filter changes, trigger any needed data fetching
-                                Task {
-                                    await viewModel.filterChanged(to: newFilter, userId: appState.user?.id)
+                                // These data loading operations don't need to be in the animation block
+                                if newFilter == .gymVisits && currentFilterOption != .gymVisits {
+                                    // Load gym visit data when filter changes to gym visits
+                                    if let userId = appState.user?.id {
+                                        Task {
+                                            await gymVisitViewModel.loadVisits(for: userId)
+                                        }
+                                    }
+                                } else if newFilter != .gymVisits {
+                                    // When filter changes, trigger any needed data fetching for activity items
+                                    Task {
+                                        await viewModel.filterChanged(to: mapFilterOptionToActivityFilter(newFilter), userId: appState.user?.id)
+                                    }
                                 }
                             }
                         )
@@ -62,77 +113,21 @@ struct ActivityView: View {
                     .padding(.vertical, 8)
                     .background(Color(.systemBackground))
                     
-                    // Activity content with vertical scrolling
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            ForEach(Array(viewModel.filteredActivityItems.enumerated()), id: \.element.id) { _, item in
-                                activityItemView(for: item)
-                                    .padding(.horizontal)
-                            }
-                        }
-                        .padding(.vertical)
+                    // Conditional content based on filter
+                    if currentFilterOption == .gymVisits {
+                        // Show gym visits content
+                        gymVisitsContent
+                    } else {
+                        // Show regular activity content
+                        activityContent
                     }
-                    // Disable horizontal scrolling while maintaining vertical scrolling
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 10, coordinateSpace: .local)
-                            .onChanged { value in
-                                // Only handle horizontal drags
-                                let horizontalAmount = abs(value.translation.width)
-                                let verticalAmount = abs(value.translation.height)
-                                
-                                // If primarily horizontal, consume the gesture for filter swiping
-                                if horizontalAmount > verticalAmount && horizontalAmount > 10 {
-                                    if value.translation.width != 0 && dragOffset == 0 {
-                                        previousFilter = mapActivityFilterToFilterOption(viewModel.selectedFilter)
-                                    }
-                                    
-                                    dragOffset = value.translation.width
-                                }
-                            }
-                            .onEnded { value in
-                                // Only process if it was primarily a horizontal gesture
-                                let horizontalAmount = abs(value.translation.width)
-                                let verticalAmount = abs(value.translation.height)
-                                
-                                if horizontalAmount > verticalAmount && horizontalAmount > 50 {
-                                    // Get the current filter option
-                                    let currentFilter = mapActivityFilterToFilterOption(viewModel.selectedFilter)
-                                    let filterOptions = FilterOption.allCases
-                                    
-                                    // Swipe left - go to next filter
-                                    if value.translation.width < 0 {
-                                        if let currentIndex = filterOptions.firstIndex(of: currentFilter),
-                                           currentIndex < filterOptions.count - 1 {
-                                            let nextFilter = filterOptions[currentIndex + 1]
-                                            withAnimation(.easeOut(duration: 0.3)) {
-                                                viewModel.selectedFilter = mapFilterOptionToActivityFilter(nextFilter)
-                                            }
-                                        }
-                                    }
-                                    // Swipe right - go to previous filter
-                                    else if value.translation.width > 0 {
-                                        if let currentIndex = filterOptions.firstIndex(of: currentFilter),
-                                           currentIndex > 0 {
-                                            let prevFilter = filterOptions[currentIndex - 1]
-                                            withAnimation(.easeOut(duration: 0.3)) {
-                                                viewModel.selectedFilter = mapFilterOptionToActivityFilter(prevFilter)
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // Reset drag offset
-                                dragOffset = 0
-                            }
-                    )
                 }
+                
                 // Position the TopNavBar at the top
-                                VStack(spacing: 0) {
-                                    TopNavBar(
-                                        appState: appState
-                                    )
-                                    Spacer()
-                                }
+                VStack(spacing: 0) {
+                    TopNavBar(appState: appState)
+                    Spacer()
+                }
                 
                 // Loading or error states
                 if viewModel.isLoading {
@@ -221,18 +216,26 @@ struct ActivityView: View {
             }
             .navigationBarHidden(true)
             .navigationDestination(isPresented: $navigateToSearch) {
-                            SearchView(appState: appState, initialSearch: searchText)
-                        }
+                SearchView(appState: appState, initialSearch: searchText)
+            }
             .navigationDestination(isPresented: $showingProfile) {
-                            if let user = navigateToUserProfile {
-                                ProfileView(appState: appState, profileUser: user)
-                            }
-                        }
+                if let user = navigateToUserProfile {
+                    ProfileView(appState: appState, profileUser: user)
+                }
+            }
+            .navigationDestination(isPresented: $showGymDetail) {
+                if let gym = selectedGym {
+                    GymProfileView(appState: appState, gym: gym.gym)
+                }
+            }
             .onAppear {
                 Task {
                     await viewModel.fetchAllActivityItems()
                     if let user = appState.user {
                         await viewModel.loadLikedItems(userId: user.id)
+                        
+                        // Also load gym visits data on initial appear
+                        await gymVisitViewModel.loadVisits(for: user.id)
                     }
                 }
             }
@@ -267,6 +270,114 @@ struct ActivityView: View {
     }
     
     // MARK: - View Components
+    
+    // Activity Content View
+    private var activityContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(Array(viewModel.filteredActivityItems.enumerated()), id: \.element.id) { _, item in
+                    activityItemView(for: item)
+                        .padding(.horizontal)
+                }
+            }
+            .padding(.vertical)
+        }
+        .simultaneousGesture(swipeGesture())
+    }
+    
+    // Gym Visits Content View
+    private var gymVisitsContent: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                // Favorite gyms section
+                if !gymVisitViewModel.favoriteGyms.isEmpty {
+                    Text("Your Favorite Gyms")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                    
+                    VStack(spacing: 8) {
+                        ForEach(gymVisitViewModel.favoriteGyms) { gymVisit in
+                            GymVisitRow(
+                                gymVisit: gymVisit,
+                                onTap: {
+                                    // When tapping a gym visit, store it and trigger navigation
+                                    selectedGym = gymVisit
+                                    showGymDetail = true
+                                },
+                                onJoin: gymVisitViewModel.isAttendee(userId: appState.user?.id ?? "", gymVisit: gymVisit) ? nil : {
+                                    joinGym(gymId: gymVisit.gym.id)
+                                },
+                                onLeave: gymVisitViewModel.isAttendee(userId: appState.user?.id ?? "", gymVisit: gymVisit) ? {
+                                    leaveGym(gymId: gymVisit.gym.id)
+                                } : nil,
+                                viewModel: gymVisitViewModel
+                            )
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                // Friends' visits section
+                if !gymVisitViewModel.friendVisitedGyms.isEmpty {
+                    Text("Where Friends Are Climbing")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.top)
+                    
+                    VStack(spacing: 8) {
+                        ForEach(gymVisitViewModel.friendVisitedGyms) { gymVisit in
+                            GymVisitRow(
+                                gymVisit: gymVisit,
+                                onTap: {
+                                    // When tapping a gym visit, store it and trigger navigation
+                                    selectedGym = gymVisit
+                                    showGymDetail = true
+                                },
+                                onJoin: gymVisitViewModel.isAttendee(userId: appState.user?.id ?? "", gymVisit: gymVisit) ? nil : {
+                                    joinGym(gymId: gymVisit.gym.id)
+                                },
+                                onLeave: gymVisitViewModel.isAttendee(userId: appState.user?.id ?? "", gymVisit: gymVisit) ? {
+                                    leaveGym(gymId: gymVisit.gym.id)
+                                } : nil,
+                                viewModel: gymVisitViewModel
+                            )
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                // Empty state
+                if gymVisitViewModel.favoriteGyms.isEmpty && gymVisitViewModel.friendVisitedGyms.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "figure.climbing")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray.opacity(0.5))
+                        
+                        Text("No visits planned today")
+                            .font(.headline)
+                        
+                        Text("Follow friends or add favorite gyms to see visits")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                    .padding(.vertical, 60)
+                }
+            }
+            .padding(.vertical)
+        }
+        .refreshable {
+            if let userId = appState.user?.id {
+                await gymVisitViewModel.loadVisits(for: userId)
+            }
+        }
+        .simultaneousGesture(swipeGesture())
+    }
     
     @ViewBuilder
     private func activityItemView(for item: any ActivityItem) -> some View {
@@ -348,18 +459,29 @@ struct ActivityView: View {
     
     // Helper to map ActivityViewModel.ActivityFilter to CreateActivityView.ActivityType
     private func mapFilterToActivityType() -> ActivityType? {
-        switch viewModel.selectedFilter {
+        switch currentFilterOption {
         case .all:
             return .basic  // Default to basic for "All" filter
         case .beta:
             return .beta
         case .event:
             return .event
+        case .gymVisits:
+            // For gym visits, this would ideally open a different creation flow
+            // but for now default to a basic post with gym context
+            return .basic
         }
     }
     
-    // Helper to map between ActivityViewModel.ActivityFilter and FilterOption
+    // Update the mapping functions to handle the new gymVisits filter
     private func mapActivityFilterToFilterOption(_ filter: ActivityViewModel.ActivityFilter) -> FilterOption {
+        // Only show gym visits if it's explicitly set as the previous filter
+        // AND we're not in the middle of a drag operation
+        if previousFilter == .gymVisits && dragOffset == 0 && viewModel.selectedFilter == filter {
+            return .gymVisits
+        }
+        
+        // Normal mapping for activity filters
         switch filter {
         case .all:
             return .all
@@ -378,7 +500,110 @@ struct ActivityView: View {
             return .beta
         case .event:
             return .event
+        case .gymVisits:
+            // For gymVisits, we don't change the underlying filter in ActivityViewModel
+            // since it's handled separately
+            return viewModel.selectedFilter // Keep current filter
         }
+    }
+    
+    // Gym visit helper methods
+    private func joinGym(gymId: String) {
+        if let userId = appState.user?.id {
+            Task {
+                _ = await gymVisitViewModel.joinGymVisit(userId: userId, gymId: gymId)
+            }
+        }
+    }
+    
+    private func leaveGym(gymId: String) {
+        if let userId = appState.user?.id {
+            Task {
+                _ = await gymVisitViewModel.leaveGymVisit(userId: userId, gymId: gymId)
+            }
+        }
+    }
+    
+    // Swipe gesture helper method
+    private func swipeGesture() -> some Gesture {
+        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+            .onChanged { value in
+                // Only handle horizontal drags
+                let horizontalAmount = abs(value.translation.width)
+                let verticalAmount = abs(value.translation.height)
+                
+                // If primarily horizontal, consume the gesture for filter swiping
+                if horizontalAmount > verticalAmount && horizontalAmount > 10 {
+                    // Store the current filter option when starting a drag
+                    if value.translation.width != 0 && dragOffset == 0 {
+                        previousFilter = currentFilterOption
+                    }
+                    
+                    dragOffset = value.translation.width
+                }
+            }
+            .onEnded { value in
+                // Only process if it was primarily a horizontal gesture
+                let horizontalAmount = abs(value.translation.width)
+                let verticalAmount = abs(value.translation.height)
+                
+                if horizontalAmount > verticalAmount && horizontalAmount > 50 {
+                    // Get all filter options
+                    let filterOptions = FilterOption.allCases
+                    
+                    // Get current filter index
+                    guard let currentIndex = filterOptions.firstIndex(of: currentFilterOption) else {
+                        dragOffset = 0
+                        return
+                    }
+                    
+                    // Calculate target filter index based on swipe direction
+                    var targetIndex: Int? = nil
+                    
+                    // Swipe left - go to next filter
+                    if value.translation.width < 0 && currentIndex < filterOptions.count - 1 {
+                        targetIndex = currentIndex + 1
+                    }
+                    // Swipe right - go to previous filter
+                    else if value.translation.width > 0 && currentIndex > 0 {
+                        targetIndex = currentIndex - 1
+                    }
+                    
+                    // If we have a valid target index, transition to that filter
+                    if let targetIndex = targetIndex {
+                        let targetFilter = filterOptions[targetIndex]
+                        
+                        // Always use animation for consistent transitions
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            // Update the previousFilter to accurately track our navigation path
+                            previousFilter = targetFilter
+                            
+                            // Update the view model's filter
+                            viewModel.selectedFilter = mapFilterOptionToActivityFilter(targetFilter)
+                        }
+                        
+                        // Handle data loading outside of animation
+                        if targetFilter == .gymVisits {
+                            if let userId = appState.user?.id {
+                                Task {
+                                    await gymVisitViewModel.loadVisits(for: userId)
+                                }
+                            }
+                        } else if currentFilterOption == .gymVisits {
+                            // Load appropriate data when switching from gym visits
+                            Task {
+                                await viewModel.filterChanged(
+                                    to: mapFilterOptionToActivityFilter(targetFilter),
+                                    userId: appState.user?.id
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // Reset drag offset
+                dragOffset = 0
+            }
     }
 }
 

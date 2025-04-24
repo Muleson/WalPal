@@ -187,6 +187,7 @@ struct GymProfileView: View {
             case is BasicPost: return "basic"
             case is BetaPost: return "beta"
             case is EventPost: return "event"
+            case is GymVisit: return "visit"
             default: return "unknown"
         }
     }
@@ -210,6 +211,9 @@ struct GymProfileView: View {
             return .beta
         case .event:
             return .event
+        case .gymVisits:
+            // Default to all when gym visits is selected in a gym profile context
+            return .all
         }
     }
 }

@@ -11,7 +11,18 @@ enum FilterOption: String, CaseIterable, Identifiable {
     case all = "All"
     case beta = "Betas"
     case event = "Events"
+    case gymVisits = "Gym Visits"
+    
     var id: String { self.rawValue }
+    
+    var systemImage: String {
+        switch self {
+        case .all: return "rectangle.grid.2x2"
+        case .beta: return "figure.climbing"
+        case .event: return "calendar"
+        case .gymVisits: return "building.2"
+        }
+    }
 }
 
 // Alternative style with underline indicators

@@ -14,15 +14,15 @@ struct Pass: Identifiable, Codable {
     let barcodeData: BarcodeData
     let isPrimary: Bool
     
+    var isValid: Bool {
+        mainInformation.isValid && barcodeData.isValid
+    }
+    
     init(mainInformation: MainInformation, barcodeData:BarcodeData, isPrimary: Bool = false) {
         self.id = UUID()
         self.mainInformation = mainInformation
         self.barcodeData = barcodeData
         self.isPrimary = isPrimary
-        
-        var isValid: Bool {
-            mainInformation.isValid && barcodeData.isValid
-        }
     }
 }
 

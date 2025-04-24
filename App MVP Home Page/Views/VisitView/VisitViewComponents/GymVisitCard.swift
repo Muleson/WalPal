@@ -122,3 +122,62 @@ struct GymVisitCard: View {
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 }
+
+#Preview {
+    // Create a sample model
+    let viewModel = GymVisitViewModel()
+    
+    // Create a sample gym visit
+    let gymVisit = GymVisit(
+        id: "sample-gym-1",
+        gym: SampleData.previewGym,
+        attendees: [
+            UserVisit(
+                id: "visit-1",
+                visitId: "visit-id-1",
+                user: SampleData.previewUsers[0],
+                visitDate: Date()
+            ),
+            UserVisit(
+                id: "visit-2",
+                visitId: "visit-id-2",
+                user: SampleData.previewUsers[1],
+                visitDate: Date().addingTimeInterval(3600)
+            )
+        ],
+        isFavourite: true
+    )
+    
+    VStack(spacing: 20) {
+        // Preview with join action
+        GymVisitCard(
+            gymVisit: gymVisit,
+            onJoin: {},
+            onLeave: nil,
+            viewModel: viewModel
+        )
+        
+        // Preview with leave action
+        GymVisitCard(
+            gymVisit: gymVisit,
+            onJoin: {},
+            onLeave: {},
+            viewModel: viewModel
+        )
+        
+        // Preview with no attendees
+        GymVisitCard(
+            gymVisit: GymVisit(
+                id: "empty-gym",
+                gym: SampleData.previewGym,
+                attendees: [],
+                isFavourite: true
+            ),
+            onJoin: {},
+            onLeave: nil,
+            viewModel: viewModel
+        )
+    }
+    .padding()
+    .background(Color(.systemGroupedBackground))
+}

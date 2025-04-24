@@ -435,22 +435,6 @@ struct ProfileView: View {
         }
     }
     
-    private func joinVisit(id: String) {
-        guard let user = appState.user else { return }
-        
-        Task {
-            await viewModel.joinVisit(visitId: id, userId: user.id)
-        }
-    }
-    
-    private func leaveVisit(id: String) {
-        guard let user = appState.user else { return }
-        
-        Task {
-            await viewModel.leaveVisit(visitId: id, userId: user.id)
-        }
-    }
-    
     private func navigateToProfile(_ user: User) {
         navigateToUserProfile = user
         showingUserProfile = true
@@ -471,6 +455,7 @@ struct ProfileView: View {
             case is BasicPost: return "basic"
             case is BetaPost: return "beta"
             case is EventPost: return "event"
+            case is GymVisit: return "visit"
             default: return "unknown"
         }
     }
