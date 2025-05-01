@@ -22,14 +22,14 @@ struct BasicPost: ActivityItem {
     let id: String
     let author: User
     let content: String
-    let mediaURL: URL?
+    let mediaItems: [Media]?
     let createdAt: Date
     var likeCount: Int
     var commentCount: Int
     var isFeatured: Bool
     
     enum CodingKeys: String, CodingKey {
-        case id, author, content, mediaURL, createdAt, likeCount, commentCount, isFeatured
+        case id, author, content, mediaItems, createdAt, likeCount, commentCount, isFeatured
     }
 }
 
@@ -38,7 +38,7 @@ struct BetaPost: ActivityItem {
     let id: String
     let author: User
     let content: String
-    let mediaURL: URL?
+    let mediaItems: [Media]?
     let createdAt: Date
     var likeCount: Int
     var commentCount: Int
@@ -47,7 +47,7 @@ struct BetaPost: ActivityItem {
     var isFeatured: Bool
     
     enum CodingKeys: String, CodingKey {
-        case id, author, content, mediaURL, createdAt, likeCount, commentCount, gym, viewCount, isFeatured
+        case id, author, content, mediaItems, createdAt, likeCount, commentCount, gym, viewCount, isFeatured
     }
 }
 
@@ -57,7 +57,7 @@ struct EventPost: ActivityItem {
     let author: User
     let title: String
     let description: String?
-    let mediaURL: URL?
+    let mediaItems: [Media]?
     let createdAt: Date
     var likeCount: Int
     var commentCount: Int
@@ -69,6 +69,6 @@ struct EventPost: ActivityItem {
     var isFeatured: Bool
     
     enum CodingKeys: String, CodingKey {
-        case id, author, title, description, mediaURL, createdAt, likeCount, commentCount, eventDate, location, maxAttendees, registered, gym, isFeatured
+        case id, author, title, description, mediaItems, createdAt, likeCount, commentCount, eventDate, location, maxAttendees, registered, gym, isFeatured
     }
 }

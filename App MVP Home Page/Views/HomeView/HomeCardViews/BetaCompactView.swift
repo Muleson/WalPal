@@ -17,8 +17,8 @@ struct BetaCompactView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Media display
             ZStack(alignment: .topTrailing) {
-                if let mediaURL = beta.mediaURL {
-                    AsyncImage(url: mediaURL) { image in
+                if let mediaItems = beta.mediaItems, let firstMedia = mediaItems.first {
+                    AsyncImage(url: firstMedia.url) { image in
                         image
                             .resizable()
                             .scaledToFill()

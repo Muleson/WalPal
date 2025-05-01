@@ -21,12 +21,12 @@ class ActivityRepositoryService {
     
     // MARK: - Create Methods
     
-    func createBasicPost(author: User, content: String, mediaURL: URL? = nil, isFeatured: Bool = false) async throws -> BasicPost {
+    func createBasicPost(author: User, content: String, mediaItems: [Media]? = nil, isFeatured: Bool = false) async throws -> BasicPost {
         let newPost = BasicPost(
             id: UUID().uuidString,
             author: author,
             content: content,
-            mediaURL: mediaURL,
+            mediaItems: mediaItems,
             createdAt: Date(),
             likeCount: 0,
             commentCount: 0,
@@ -43,12 +43,12 @@ class ActivityRepositoryService {
         return newPost
     }
 
-    func createBetaPost(author: User, content: String, gym: Gym, mediaURL: URL? = nil, isFeatured: Bool = false) async throws -> BetaPost {
+    func createBetaPost(author: User, content: String, gym: Gym, mediaItems: [Media]? = nil, isFeatured: Bool = false) async throws -> BetaPost {
         let newPost = BetaPost(
             id: UUID().uuidString,
             author: author,
             content: content,
-            mediaURL: mediaURL,
+            mediaItems: mediaItems,
             createdAt: Date(),
             likeCount: 0,
             commentCount: 0,
@@ -67,23 +67,13 @@ class ActivityRepositoryService {
         return newPost
     }
 
-    func createEventPost(
-        author: User,
-        title: String,
-        description: String?,
-        eventDate: Date,
-        location: String,
-        maxAttendees: Int,
-        gym: Gym?,
-        mediaURL: URL? = nil,
-        isFeatured: Bool = false
-    ) async throws -> EventPost {
+    func createEventPost(author: User, title: String, description: String?, eventDate: Date, location: String, maxAttendees: Int, gym: Gym?, mediaItems: [Media]? = nil, isFeatured: Bool = false) async throws -> EventPost {
         let newPost = EventPost(
             id: UUID().uuidString,
             author: author,
             title: title,
             description: description,
-            mediaURL: mediaURL,
+            mediaItems: mediaItems,
             createdAt: Date(),
             likeCount: 0,
             commentCount: 0,

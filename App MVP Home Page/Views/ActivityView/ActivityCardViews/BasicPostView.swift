@@ -12,6 +12,7 @@ struct BasicPostView: View {
     let isLiked: Bool
     let onLike: () -> Void
     let onComment: () -> Void
+    let onMediaTap: ((Media) -> Void)?
     let onDelete: (() -> Void)?
     let onAuthorTapped: (User) -> Void
     
@@ -46,18 +47,21 @@ struct BasicPostView: View {
                 Text(post.content)
                     .fixedSize(horizontal: false, vertical: true)
                 
-                // Media (if available)
-                if let mediaURL = post.mediaURL {
-                    AsyncImage(url: mediaURL) { image in
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
+                if let mediaItems = post.mediaItems, !mediaItems.isEmpty {
+                    if mediaItems.count == 1 {
+                        // Single media item - show large
+                        MediaThumbnailView(media: mediaItems[0])
+                            .aspectRatio(contentMode: .fill)
                             .frame(height: 200)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .onTapGesture {
+                                onMediaTap?(mediaItems[0])
+                            }
+                    } else {
+                        // Multiple media items - show grid
+                        MediaGridView(mediaItems: mediaItems) { media in
+                            onMediaTap?(media)
+                        }
                     }
                 }
                 

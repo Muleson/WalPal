@@ -26,6 +26,10 @@ struct GymActivityFeedView: View {
     
     let selectedFilter: GymActivityFilter
     
+    // Media engagement
+    @Binding var selectedMedia: Media?
+    @Binding var showFullScreenMedia: Bool
+        
     var body: some View {
         if viewModel.isLoadingActivities {
             ProgressView()
@@ -83,6 +87,7 @@ struct GymActivityFeedView: View {
                     isLiked: viewModel.isItemLiked(itemId: basicPost.id),
                     onLike: { toggleLike(itemId: basicPost.id) },
                     onComment: { showCommentsForItem(basicPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: basicPost) ? { deleteItem(id: basicPost.id) } : nil,
                     onAuthorTapped: { navigateToProfile($0) }
                 )
@@ -92,6 +97,7 @@ struct GymActivityFeedView: View {
                     isLiked: viewModel.isItemLiked(itemId: betaPost.id),
                     onLike: { toggleLike(itemId: betaPost.id) },
                     onComment: { showCommentsForItem(betaPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: betaPost) ? { deleteItem(id: betaPost.id) } : nil,
                     onAuthorTapped: { navigateToProfile($0) }
                 )
@@ -101,6 +107,7 @@ struct GymActivityFeedView: View {
                     isLiked: viewModel.isItemLiked(itemId: eventPost.id),
                     onLike: { toggleLike(itemId: eventPost.id) },
                     onComment: { showCommentsForItem(eventPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: eventPost) ? { deleteItem(id: eventPost.id) } : nil,
                     onAuthorTapped: { navigateToProfile($0) }
                 )
@@ -140,6 +147,11 @@ struct GymActivityFeedView: View {
     private func navigateToProfile(_ user: User) {
         navigateToUserProfile = user
         showingUserProfile = true
+    }
+    
+    private func handleMediaTap(_ media: Media) {
+        selectedMedia = media
+        showFullScreenMedia = true
     }
     
     private func isAuthor(of item: any ActivityItem) -> Bool {

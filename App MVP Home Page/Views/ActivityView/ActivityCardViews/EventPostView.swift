@@ -12,6 +12,7 @@ struct EventPostView: View {
     let isLiked: Bool
     let onLike: () -> Void
     let onComment: () -> Void
+    let onMediaTap: ((Media) -> Void)?
     let onDelete: (() -> Void)?
     let onAuthorTapped: (User) -> Void
         
@@ -19,8 +20,7 @@ struct EventPostView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with author info
             HStack {
-                AuthorView(author: post.author, onTap: { onAuthorTapped(post.author)
-                })
+                AuthorView(author: post.author, onTap: { onAuthorTapped(post.author) })
                 
                 Spacer()
                 
@@ -90,25 +90,27 @@ struct EventPostView: View {
                     }
                     .font(.appSubheadline)
                     .foregroundStyle(Color.appTextLight)
-
                 }
                 
                 Spacer()
-                
             }
             
-            // Media (if available)
-            if let mediaURL = post.mediaURL {
-                AsyncImage(url: mediaURL) { image in
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+            // Media (updated for multiple media support)
+            if let mediaItems = post.mediaItems, !mediaItems.isEmpty {
+                if mediaItems.count == 1 {
+                    // Single media item - show large
+                    MediaThumbnailView(media: mediaItems[0])
+                        .aspectRatio(contentMode: .fill)
                         .frame(height: 200)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .onTapGesture {
+                            onMediaTap?(mediaItems[0])
+                        }
+                } else {
+                    // Multiple media items - show grid
+                    MediaGridView(mediaItems: mediaItems) { media in
+                        onMediaTap?(media)
+                    }
                 }
             }
             
@@ -175,6 +177,7 @@ struct EventPostView: View {
         isLiked: true,
         onLike: {},
         onComment: {},
+        onMediaTap: { _ in },
         onDelete: {},
         onAuthorTapped: { _ in }
     )

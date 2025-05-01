@@ -24,6 +24,9 @@ struct GymProfileView: View {
     // Filter state
     @State private var selectedFilter: GymActivityFilter = .all
     
+    @State private var selectedMedia: Media?
+    @State private var showFullScreenMedia = false
+    
     // Initialize with Gym ID
     init(appState: AppState, gym: Gym) {
         self.appState = appState
@@ -58,7 +61,9 @@ struct GymProfileView: View {
                         selectedItemForComments: $selectedItemForComments,
                         navigateToUserProfile: $navigateToUserProfile,
                         showingUserProfile: $showingUserProfile,
-                        selectedFilter: selectedFilter
+                        selectedFilter: selectedFilter,
+                        selectedMedia: $selectedMedia,
+                        showFullScreenMedia: $showFullScreenMedia
                     )
                 }
             }
@@ -133,6 +138,11 @@ struct GymProfileView: View {
             .sheet(isPresented: $viewModel.showManageAdminsSheet) {
                 ManageGymAdminsView(appState: appState, gym: viewModel.gym)
             }
+            .fullScreenCover(isPresented: $showFullScreenMedia) {
+                if let media = selectedMedia {
+                    FullScreenMediaView(mediaUrl: media.url.absoluteString)
+                }
+            }
             .onAppear {
                 Task {
                     // Load gym, activities, and check admin status
@@ -190,6 +200,11 @@ struct GymProfileView: View {
             case is GymVisit: return "visit"
             default: return "unknown"
         }
+    }
+    
+    private func handleMediaTap(_ media: Media) {
+        selectedMedia = media
+        showFullScreenMedia = true
     }
     
     private func mapGymFilterToFilterOption(_ filter: GymActivityFilter) -> FilterOption {

@@ -40,6 +40,14 @@ class CreateActivityViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorMessage = ""
     
+    // Media-related properties
+    @Published var selectedImages: [UIImage] = []
+    @Published var selectedVideos: [URL] = []
+    @Published var isUploadingMedia = false
+    @Published var uploadProgress: Double = 0
+    @Published var mediaItems: [Media] = []
+    
+    private let mediaStorageService = MediaStorageService()
     private let activityRepository = ActivityRepositoryService()
     private var _preselectedGym: Gym?
 
@@ -64,8 +72,15 @@ class CreateActivityViewModel: ObservableObject {
         guard isFormValid else { return }
         
         isLoading = true
+        isUploadingMedia = !selectedImages.isEmpty || !selectedVideos.isEmpty
         
         do {
+            // First upload all media
+            if !selectedImages.isEmpty || !selectedVideos.isEmpty {
+                await uploadAllMedia(authorId: author.id)
+            }
+
+            // Then create the activity item with the uploaded media
             switch selectedType {
             case .basic:
                 try await createBasicPost(author: author)
@@ -77,12 +92,52 @@ class CreateActivityViewModel: ObservableObject {
             
             await MainActor.run {
                 isLoading = false
+                isUploadingMedia = false
             }
         } catch {
             await MainActor.run {
                 errorMessage = error.localizedDescription
                 showError = true
                 isLoading = false
+                isUploadingMedia = false
+            }
+        }
+    }
+    
+    private func uploadAllMedia(authorId: String) async {
+        // First upload all images
+        for image in selectedImages {
+            uploadProgress = Double(mediaItems.count) / Double(selectedImages.count + selectedVideos.count)
+            
+            do {
+                let media = try await mediaStorageService.uploadImage(image, ownerId: authorId)
+                await MainActor.run {
+                    mediaItems.append(media)
+                }
+            } catch {
+                print("Failed to upload image: \(error.localizedDescription)")
+                // Continue with other uploads even if one fails
+            }
+        }
+        
+        // Then upload all videos
+        for videoURL in selectedVideos {
+            do {
+                let media = try await mediaStorageService.uploadVideo(videoURL, ownerId: authorId) { progress in
+                    let baseProgress = Double(self.mediaItems.count) / Double(self.selectedImages.count + self.selectedVideos.count)
+                    let additionalProgress = progress / Double(self.selectedImages.count + self.selectedVideos.count)
+                    
+                    Task { @MainActor in
+                        self.uploadProgress = baseProgress + additionalProgress
+                    }
+                }
+                
+                await MainActor.run {
+                    mediaItems.append(media)
+                }
+            } catch {
+                print("Failed to upload video: \(error.localizedDescription)")
+                // Continue with other uploads even if one fails
             }
         }
     }
@@ -91,7 +146,7 @@ class CreateActivityViewModel: ObservableObject {
         _ = try await activityRepository.createBasicPost(
             author: author,
             content: content,
-            mediaURL: mediaURL
+            mediaItems: mediaItems.isEmpty ? nil : mediaItems
         )
     }
     
@@ -110,8 +165,8 @@ class CreateActivityViewModel: ObservableObject {
             author: author,
             content: content,
             gym: gym,
-            mediaURL: mediaURL
-        )
+            mediaItems: mediaItems
+            )
     }
     
     private func createEventPost(author: User) async throws {
@@ -130,7 +185,7 @@ class CreateActivityViewModel: ObservableObject {
             location: eventLocation,
             maxAttendees: maxAttendees,
             gym: gym,
-            mediaURL: mediaURL
+            mediaItems: mediaItems.isEmpty ? nil : mediaItems
         )
     }
     

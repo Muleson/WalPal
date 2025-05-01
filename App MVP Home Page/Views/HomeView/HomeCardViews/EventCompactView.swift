@@ -17,8 +17,8 @@ struct EventCompactView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Media display
             ZStack(alignment: .topTrailing) {
-                if let mediaURL = event.mediaURL {
-                    AsyncImage(url: mediaURL) { image in
+                if let mediaItems = event.mediaItems, let firstMedia = mediaItems.first {
+                    AsyncImage(url: firstMedia.url) { image in
                         image
                             .resizable()
                             .scaledToFill()

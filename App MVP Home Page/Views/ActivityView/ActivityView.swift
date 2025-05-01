@@ -34,6 +34,10 @@ struct ActivityView: View {
     @State private var selectedGym: GymVisit? = nil
     @State private var showGymDetail = false
     
+    // Media Engagement
+    @State private var selectedMedia: Media?
+    @State private var showFullScreenMedia = false
+    
     // Computed property for dynamic title based on selected filter
     private var dynamicTitle: some View {
         let title: String
@@ -251,6 +255,11 @@ struct ActivityView: View {
                     )
                 }
             }
+            .fullScreenCover(isPresented: $showFullScreenMedia) {
+                if let media = selectedMedia {
+                    FullScreenMediaView(mediaUrl: media.url.absoluteString)
+                }
+            }
             .navigationDestination(isPresented: $showCreateContent) {
                 // Use your existing CreateActivityView with appropriate type
                 if let activityType = mapFilterToActivityType() {
@@ -282,7 +291,7 @@ struct ActivityView: View {
             }
             .padding(.vertical)
         }
-        .simultaneousGesture(swipeGesture())
+        .gesture(swipeGesture(), including: .all)
     }
     
     // Gym Visits Content View
@@ -376,7 +385,7 @@ struct ActivityView: View {
                 await gymVisitViewModel.loadVisits(for: userId)
             }
         }
-        .simultaneousGesture(swipeGesture())
+        .gesture(swipeGesture(), including: .all)
     }
     
     @ViewBuilder
@@ -388,15 +397,19 @@ struct ActivityView: View {
                     isLiked: viewModel.isItemLiked(itemId: basicPost.id),
                     onLike: { toggleLike(itemId: basicPost.id) },
                     onComment: { showCommentsForItem(basicPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: basicPost) ? { deleteItem(id: basicPost.id) } : nil,
                     onAuthorTapped: { user in navigateToUserProfile = user; showingProfile = true }
                 )
+                // Add video display if the post contains video
+
             } else if let betaPost = item as? BetaPost {
                 BetaPostView(
                     post: betaPost,
                     isLiked: viewModel.isItemLiked(itemId: betaPost.id),
                     onLike: { toggleLike(itemId: betaPost.id) },
                     onComment: { showCommentsForItem(betaPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: betaPost) ? { deleteItem(id: betaPost.id) } : nil,
                     onAuthorTapped: { user in navigateToUserProfile = user }
                 )
@@ -406,6 +419,7 @@ struct ActivityView: View {
                     isLiked: viewModel.isItemLiked(itemId: eventPost.id),
                     onLike: { toggleLike(itemId: eventPost.id) },
                     onComment: { showCommentsForItem(eventPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: eventPost) ? { deleteItem(id: eventPost.id) } : nil,
                     onAuthorTapped: { user in navigateToUserProfile = user; showingProfile = true }
                 )
@@ -446,6 +460,11 @@ struct ActivityView: View {
     private func showCommentsForItem(_ item: any ActivityItem) {
         selectedItemForComments = item
         showingComments = true
+    }
+    
+    private func handleMediaTap(_ media: Media) {
+        selectedMedia = media
+        showFullScreenMedia = true
     }
     
     private func getItemType(from item: any ActivityItem) -> String {

@@ -13,7 +13,7 @@ protocol ActivityViewModelFactory {
 
 // Default implementation for production use
 class DefaultActivityViewModelFactory: ActivityViewModelFactory {
-    func makeActivityViewModel() -> ActivityViewModel {
+    func makeActivityViewModel() async -> ActivityViewModel {
         // Create the real repository
         let _ = ActivityRepositoryService()
         
@@ -28,12 +28,12 @@ class DefaultActivityViewModelFactory: ActivityViewModelFactory {
 
 // Preview implementation for SwiftUI previews
 class PreviewActivityViewModelFactory: ActivityViewModelFactory {
-    func makeActivityViewModel() -> ActivityViewModel {
+    func makeActivityViewModel() async -> ActivityViewModel {
         let viewModel = ActivityViewModel()
         
         // Pre-populate with sample data for previews
-        // This would happen on the MainActor
-        Task { @MainActor in
+        // This happens on the MainActor since we're already in an async context
+        await MainActor.run {
             viewModel.activityItems = SampleData.createSampleActivityItems()
             viewModel.isLoading = false
         }
@@ -52,10 +52,10 @@ class MockActivityViewModelFactory: ActivityViewModelFactory {
         self.shouldSimulateError = shouldSimulateError
     }
     
-    func makeActivityViewModel() -> ActivityViewModel {
+    func makeActivityViewModel() async -> ActivityViewModel {
         let viewModel = ActivityViewModel()
         
-        Task { @MainActor in
+        await MainActor.run {
             if shouldSimulateError {
                 viewModel.errorMessage = "Simulated network error"
                 viewModel.hasError = true

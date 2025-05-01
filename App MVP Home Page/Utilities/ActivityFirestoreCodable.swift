@@ -22,8 +22,23 @@ extension BasicPost: FirestoreCodable {
             "isFeatured": isFeatured
         ]
         
-        if let mediaURL = mediaURL {
-            data["mediaURL"] = mediaURL.absoluteString
+        // Convert media items to JSON data
+        if let mediaItems = mediaItems, !mediaItems.isEmpty {
+            data["mediaItems"] = mediaItems.map { media -> [String: Any] in
+                var mediaData: [String: Any] = [
+                    "id": media.id,
+                    "url": media.url.absoluteString,
+                    "type": media.type.rawValue,
+                    "uploadedAt": media.uploadedAt.firestoreTimestamp,
+                    "ownerId": media.ownerId
+                ]
+                
+                if let thumbnailURL = media.thumbnailURL {
+                    mediaData["thumbnailURL"] = thumbnailURL.absoluteString
+                }
+                
+                return mediaData
+            }
         }
         
         return data
@@ -46,9 +61,27 @@ extension BasicPost: FirestoreCodable {
             createdAt = Date()
         }
         
-        // Handle mediaURL
-        let mediaURLString = firestoreData["mediaURL"] as? String
-        let mediaURL = stringToURL(mediaURLString)
+        // Parse media items
+        var mediaItems: [Media] = []
+        if let mediaItemsData = firestoreData["mediaItems"] as? [[String: Any]] {
+            for mediaData in mediaItemsData {
+                if let mediaItem = parseMediaItem(from: mediaData) {
+                    mediaItems.append(mediaItem)
+                }
+            }
+        } else if let legacyMediaURLString = firestoreData["mediaURL"] as? String, 
+                  let mediaURL = stringToURL(legacyMediaURLString) {
+            // Handle legacy format with single mediaURL
+            let media = Media(
+                id: UUID().uuidString,
+                url: mediaURL,
+                type: .image,
+                thumbnailURL: nil,
+                uploadedAt: Date(),
+                ownerId: author.id
+            )
+            mediaItems.append(media)
+        }
         
         // Extract engagement metrics with defaults
         let likeCount = firestoreData["likeCount"] as? Int ?? 0
@@ -59,7 +92,7 @@ extension BasicPost: FirestoreCodable {
             id: id,
             author: author,
             content: content,
-            mediaURL: mediaURL,
+            mediaItems: mediaItems,
             createdAt: createdAt,
             likeCount: likeCount,
             commentCount: commentCount,
@@ -98,9 +131,27 @@ extension BasicPost: FirestoreCodable {
             createdAt = Date()
         }
         
-        // Handle mediaURL
-        let mediaURLString = firestoreData["mediaURL"] as? String
-        let mediaURL = stringToURL(mediaURLString)
+        // Parse media items
+        var mediaItems: [Media] = []
+        if let mediaItemsData = firestoreData["mediaItems"] as? [[String: Any]] {
+            for mediaData in mediaItemsData {
+                if let mediaItem = parseMediaItem(from: mediaData) {
+                    mediaItems.append(mediaItem)
+                }
+            }
+        } else if let legacyMediaURLString = firestoreData["mediaURL"] as? String, 
+                  let mediaURL = stringToURL(legacyMediaURLString) {
+            // Handle legacy format with single mediaURL
+            let media = Media(
+                id: UUID().uuidString,
+                url: mediaURL,
+                type: .image,
+                thumbnailURL: nil,
+                uploadedAt: Date(),
+                ownerId: placeholderAuthor.id
+            )
+            mediaItems.append(media)
+        }
         
         // Extract engagement metrics with defaults
         let likeCount = firestoreData["likeCount"] as? Int ?? 0
@@ -111,13 +162,50 @@ extension BasicPost: FirestoreCodable {
             id: id,
             author: placeholderAuthor,
             content: content,
-            mediaURL: mediaURL,
+            mediaItems: mediaItems,
             createdAt: createdAt,
             likeCount: likeCount,
             commentCount: commentCount,
             isFeatured: isFeatured
         )
     }
+}
+
+// Helper function to parse Media objects from Firestore data
+private func parseMediaItem(from mediaData: [String: Any]) -> Media? {
+    guard
+        let id = mediaData["id"] as? String,
+        let urlString = mediaData["url"] as? String,
+        let url = URL(string: urlString),
+        let typeString = mediaData["type"] as? String,
+        let type = MediaType(rawValue: typeString),
+        let ownerId = mediaData["ownerId"] as? String
+    else {
+        return nil
+    }
+    
+    // Handle thumbnail URL
+    var thumbnailURL: URL? = nil
+    if let thumbnailURLString = mediaData["thumbnailURL"] as? String {
+        thumbnailURL = URL(string: thumbnailURLString)
+    }
+    
+    // Handle upload date
+    let uploadedAt: Date
+    if let timestamp = mediaData["uploadedAt"] as? Timestamp {
+        uploadedAt = timestamp.dateValue
+    } else {
+        uploadedAt = Date()
+    }
+    
+    return Media(
+        id: id,
+        url: url,
+        type: type,
+        thumbnailURL: thumbnailURL,
+        uploadedAt: uploadedAt,
+        ownerId: ownerId
+    )
 }
 
 // MARK: - BetaPost + FirestoreCodable
@@ -136,8 +224,23 @@ extension BetaPost: FirestoreCodable {
             "isFeatured": isFeatured
         ]
         
-        if let mediaURL = mediaURL {
-            data["mediaURL"] = mediaURL.absoluteString
+        // Convert media items to JSON data
+        if let mediaItems = mediaItems, !mediaItems.isEmpty {
+            data["mediaItems"] = mediaItems.map { media -> [String: Any] in
+                var mediaData: [String: Any] = [
+                    "id": media.id,
+                    "url": media.url.absoluteString,
+                    "type": media.type.rawValue,
+                    "uploadedAt": media.uploadedAt.firestoreTimestamp,
+                    "ownerId": media.ownerId
+                ]
+                
+                if let thumbnailURL = media.thumbnailURL {
+                    mediaData["thumbnailURL"] = thumbnailURL.absoluteString
+                }
+                
+                return mediaData
+            }
         }
         
         return data
@@ -160,9 +263,15 @@ extension BetaPost: FirestoreCodable {
             createdAt = Date()
         }
         
-        // Handle mediaURL
-        let mediaURLString = firestoreData["mediaURL"] as? String
-        let mediaURL = stringToURL(mediaURLString)
+        // Parse media items
+        var mediaItems: [Media] = []
+        if let mediaItemsData = firestoreData["mediaItems"] as? [[String: Any]] {
+            for mediaData in mediaItemsData {
+                if let mediaItem = parseMediaItem(from: mediaData) {
+                    mediaItems.append(mediaItem)
+                }
+            }
+        }
         
         // Extract engagement metrics with defaults
         let likeCount = firestoreData["likeCount"] as? Int ?? 0
@@ -174,7 +283,7 @@ extension BetaPost: FirestoreCodable {
             id: id,
             author: author,
             content: content,
-            mediaURL: mediaURL,
+            mediaItems: mediaItems,
             createdAt: createdAt,
             likeCount: likeCount,
             commentCount: commentCount,
@@ -214,8 +323,23 @@ extension EventPost: FirestoreCodable {
             data["description"] = description
         }
         
-        if let mediaURL = mediaURL {
-            data["mediaURL"] = mediaURL.absoluteString
+        // Convert media items to JSON data
+        if let mediaItems = mediaItems, !mediaItems.isEmpty {
+            data["mediaItems"] = mediaItems.map { media -> [String: Any] in
+                var mediaData: [String: Any] = [
+                    "id": media.id,
+                    "url": media.url.absoluteString,
+                    "type": media.type.rawValue,
+                    "uploadedAt": media.uploadedAt.firestoreTimestamp,
+                    "ownerId": media.ownerId
+                ]
+                
+                if let thumbnailURL = media.thumbnailURL {
+                    mediaData["thumbnailURL"] = thumbnailURL.absoluteString
+                }
+                
+                return mediaData
+            }
         }
         
         if let gym = gym {
@@ -253,9 +377,15 @@ extension EventPost: FirestoreCodable {
         // Optional fields
         let description = firestoreData["description"] as? String
         
-        // Handle mediaURL
-        let mediaURLString = firestoreData["mediaURL"] as? String
-        let mediaURL = stringToURL(mediaURLString)
+        // Parse media items
+        var mediaItems: [Media] = []
+        if let mediaItemsData = firestoreData["mediaItems"] as? [[String: Any]] {
+            for mediaData in mediaItemsData {
+                if let mediaItem = parseMediaItem(from: mediaData) {
+                    mediaItems.append(mediaItem)
+                }
+            }
+        }
         
         // Extract engagement metrics and other numerics with defaults
         let likeCount = firestoreData["likeCount"] as? Int ?? 0
@@ -269,7 +399,7 @@ extension EventPost: FirestoreCodable {
             author: author,
             title: title,
             description: description,
-            mediaURL: mediaURL,
+            mediaItems: mediaItems,
             createdAt: createdAt,
             likeCount: likeCount,
             commentCount: commentCount,

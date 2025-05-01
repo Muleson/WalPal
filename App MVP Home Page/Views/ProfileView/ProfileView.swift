@@ -25,6 +25,10 @@ struct ProfileView: View {
     @State private var dragOffset: CGFloat = 0
     @State private var previousTab = 0
     
+    //Media engagement
+    @State private var selectedMedia: Media?
+    @State private var showFullScreenMedia = false
+    
     // User parameter passed to the view
     var profileUser: User?
     
@@ -162,6 +166,11 @@ struct ProfileView: View {
             .sheet(isPresented: $showFollowingList) {
                 if let userId = viewModel.getCurrentProfileId() {
                     FollowingListView(userId: userId, appState: appState)
+                }
+            }
+            .fullScreenCover(isPresented: $showFullScreenMedia) {
+                if let media = selectedMedia {
+                    FullScreenMediaView(mediaUrl: media.url.absoluteString)
                 }
             }
             .navigationDestination(isPresented: $showingUserProfile) {
@@ -387,6 +396,7 @@ struct ProfileView: View {
                     isLiked: viewModel.isItemLiked(itemId: basicPost.id),
                     onLike: { toggleLike(itemId: basicPost.id) },
                     onComment: { showCommentsForItem(basicPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: basicPost) ? { deleteItem(id: basicPost.id) } : nil,
                     onAuthorTapped: { user in navigateToProfile(user) }
                 )
@@ -396,6 +406,7 @@ struct ProfileView: View {
                     isLiked: viewModel.isItemLiked(itemId: betaPost.id),
                     onLike: { toggleLike(itemId: betaPost.id) },
                     onComment: { showCommentsForItem(betaPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: betaPost) ? { deleteItem(id: betaPost.id) } : nil,
                     onAuthorTapped: { user in navigateToProfile(user) }
                 )
@@ -405,6 +416,7 @@ struct ProfileView: View {
                     isLiked: viewModel.isItemLiked(itemId: eventPost.id),
                     onLike: { toggleLike(itemId: eventPost.id) },
                     onComment: { showCommentsForItem(eventPost) },
+                    onMediaTap: { media in handleMediaTap(media) },
                     onDelete: isAuthor(of: eventPost) ? { deleteItem(id: eventPost.id) } : nil,
                     onAuthorTapped: { user in navigateToProfile(user) }
                 )
@@ -448,6 +460,11 @@ struct ProfileView: View {
     private func showCommentsForItem(_ item: any ActivityItem) {
         selectedItemForComments = item
         showingComments = true
+    }
+    
+    private func handleMediaTap(_ media: Media) {
+        selectedMedia = media
+        showFullScreenMedia = true
     }
     
     private func getItemType(from item: any ActivityItem) -> String {

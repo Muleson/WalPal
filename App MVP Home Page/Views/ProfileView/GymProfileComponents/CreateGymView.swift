@@ -14,123 +14,10 @@ struct CreateGymView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("Gym Information")) {
-                TextField("Gym Name", text: $viewModel.name)
-                
-                TextField("Email", text: $viewModel.email)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                
-                TextField("Description", text: $viewModel.description, axis: .vertical)
-                    .lineLimit(3...6)
-                
-                TextField("Location", text: $viewModel.location)
-            }
-            
-            Section(header: Text("Gym Logo")) {
-                HStack {
-                    Spacer()
-                    
-                    if let image = viewModel.selectedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 150)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.gray, lineWidth: 1)
-                            )
-                    } else {
-                        Image(systemName: "building.2.crop.circle")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 100)
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.vertical, 10)
-                
-                Button(viewModel.selectedImage == nil ? "Select Logo" : "Change Logo") {
-                    viewModel.isImagePickerPresented = true
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .foregroundStyle(.appButton)
-            }
-            
-            Section(header: Text("Climbing Types")) {
-                ForEach(ClimbingTypes.allCases, id: \.self) { type in
-                    Button(action: {
-                        if viewModel.selectedClimbingTypes.contains(type) {
-                            viewModel.selectedClimbingTypes.remove(type)
-                        } else {
-                            viewModel.selectedClimbingTypes.insert(type)
-                        }
-                    }) {
-                        HStack {
-                            Text(formatClimbingType(type))
-                            Spacer()
-                            if viewModel.selectedClimbingTypes.contains(type) {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                    }
-                    .foregroundColor(.primary)
-                }
-            }
-            
-            // Amenities section - simplified to avoid type inference issues
-            Section(header: Text("Amenities")) {
-                // Instead of the LazyVGrid, use a simpler layout for now
-                ForEach(viewModel.commonAmenities, id: \.self) { amenity in
-                    HStack {
-                        Image(systemName: viewModel.getAmenityIcon(amenity))
-                            .foregroundColor(.secondary)
-                        Text(amenity)
-                        Spacer()
-                        if viewModel.selectedAmenities.contains(amenity) {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.appButton)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.toggleAmenity(amenity)
-                    }
-                }
-                                
-                // Custom amenities
-                ForEach(viewModel.customAmenities, id: \.self) { amenity in
-                    HStack {
-                        Image(systemName: viewModel.getAmenityIcon(amenity))
-                            .foregroundColor(.secondary)
-                        Text(amenity)
-                        Spacer()
-                        if viewModel.selectedAmenities.contains(amenity) {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.appButton)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.toggleAmenity(amenity)
-                    }
-                }
-                
-                HStack {
-                    TextField("Add Custom Amenity", text: $viewModel.newCustomAmenity)
-                    Button(action: {
-                        viewModel.addCustomAmenity()
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.appButton)
-                    }
-                    .disabled(viewModel.newCustomAmenity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
+            GymInformationSection(viewModel: viewModel)
+            GymLogoSection(viewModel: viewModel)
+            ClimbingTypesSection(viewModel: viewModel)
+            AmenitiesSection(viewModel: viewModel)
         }
         .navigationTitle("Register a Gym")
         .navigationBarTitleDisplayMode(.inline)
@@ -149,10 +36,7 @@ struct CreateGymView: View {
         }
         .overlay {
             if viewModel.isLoading {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.opacity(0.1))
+                LoadingOverlay()
             }
         }
         .alert("Error", isPresented: $viewModel.showError) {
@@ -169,17 +53,189 @@ struct CreateGymView: View {
             ImagePicker(selectedImage: $viewModel.selectedImage)
         }
     }
+}
+
+// MARK: - Component Views
+
+struct GymInformationSection: View {
+    @ObservedObject var viewModel: CreateGymViewModel
+    
+    var body: some View {
+        Section(header: Text("Gym Information")) {
+            TextField("Gym Name", text: $viewModel.name)
+            
+            TextField("Email", text: $viewModel.email)
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+            
+            TextField("Description", text: $viewModel.description, axis: .vertical)
+                .lineLimit(3...6)
+            
+            TextField("Location", text: $viewModel.location)
+        }
+    }
+}
+
+struct GymLogoSection: View {
+    @ObservedObject var viewModel: CreateGymViewModel
+    
+    var body: some View {
+        Section(header: Text("Gym Logo")) {
+            HStack {
+                Spacer()
+                
+                if let image = viewModel.selectedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 150)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.gray, lineWidth: 1)
+                        )
+                } else {
+                    Image(systemName: "building.2.crop.circle")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 100)
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+            }
+            .padding(.vertical, 10)
+            
+            Button(viewModel.selectedImage == nil ? "Select Logo" : "Change Logo") {
+                viewModel.isImagePickerPresented = true
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .foregroundStyle(.appButton)
+        }
+    }
+}
+
+struct ClimbingTypesSection: View {
+    @ObservedObject var viewModel: CreateGymViewModel
+    
+    var body: some View {
+        Section(header: Text("Climbing Types")) {
+            ForEach(ClimbingTypes.allCases, id: \.self) { type in
+                Button(action: {
+                    if viewModel.selectedClimbingTypes.contains(type) {
+                        viewModel.selectedClimbingTypes.remove(type)
+                    } else {
+                        viewModel.selectedClimbingTypes.insert(type)
+                    }
+                }) {
+                    HStack {
+                        Text(formatClimbingType(type))
+                        Spacer()
+                        if viewModel.selectedClimbingTypes.contains(type) {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+                .foregroundColor(.primary)
+            }
+        }
+    }
     
     // Helper method to format climbing type
     private func formatClimbingType(_ type: ClimbingTypes) -> String {
         switch type {
-        case .bouldering:
-            return "Bouldering"
-        case .lead:
-            return "Lead Climbing"
-        case .topRope:
-            return "Top Rope"
+        case .bouldering: return "Bouldering"
+        case .lead: return "Lead Climbing"
+        case .topRope: return "Top Rope"
         }
+    }
+}
+
+struct AmenitiesSection: View {
+    @ObservedObject var viewModel: CreateGymViewModel
+    
+    var body: some View {
+        Section(header: Text("Amenities")) {
+            // Common amenities
+            CommonAmenitiesList(viewModel: viewModel)
+            
+            // Custom amenities
+            CustomAmenitiesList(viewModel: viewModel)
+            
+            // Add new custom amenity
+            HStack {
+                TextField("Add Custom Amenity", text: $viewModel.newCustomAmenity)
+                Button(action: {
+                    viewModel.addCustomAmenity()
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.appButton)
+                }
+                .disabled(viewModel.newCustomAmenity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+}
+
+struct CommonAmenitiesList: View {
+    @ObservedObject var viewModel: CreateGymViewModel
+    
+    var body: some View {
+        ForEach(viewModel.commonAmenities, id: \.self) { amenity in
+            AmenityRow(
+                amenity: amenity,
+                isSelected: viewModel.selectedAmenities.contains(amenity),
+                iconName: viewModel.getAmenityIcon(amenity),
+                toggle: { viewModel.toggleAmenity(amenity) }
+            )
+        }
+    }
+}
+
+struct CustomAmenitiesList: View {
+    @ObservedObject var viewModel: CreateGymViewModel
+    
+    var body: some View {
+        ForEach(viewModel.customAmenities, id: \.self) { amenity in
+            AmenityRow(
+                amenity: amenity,
+                isSelected: viewModel.selectedAmenities.contains(amenity),
+                iconName: viewModel.getAmenityIcon(amenity),
+                toggle: { viewModel.toggleAmenity(amenity) }
+            )
+        }
+    }
+}
+
+struct AmenityRow: View {
+    let amenity: String
+    let isSelected: Bool
+    let iconName: String
+    let toggle: () -> Void
+    
+    var body: some View {
+        HStack {
+            Image(systemName: iconName)
+                .foregroundColor(.secondary)
+            Text(amenity)
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .foregroundColor(.appButton)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: toggle)
+    }
+}
+
+struct LoadingOverlay: View {
+    var body: some View {
+        ProgressView()
+            .scaleEffect(1.5)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black.opacity(0.1))
     }
 }
 

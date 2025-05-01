@@ -22,6 +22,10 @@ struct SearchView: View {
     @State private var showingComments = false
     @State private var selectedItemForComments: (any ActivityItem)?
     
+    // Media engagement
+    @State private var selectedMedia: Media?
+    @State private var showFullScreenMedia = false
+    
     // Add this to initialize with a search term
     init(appState: AppState, initialSearch: String? = nil) {
         self.appState = appState
@@ -52,6 +56,11 @@ struct SearchView: View {
                         itemId: item.id,
                         itemType: getItemType(from: item)
                     )
+                }
+            }
+            .fullScreenCover(isPresented: $showFullScreenMedia) {
+                if let media = selectedMedia {
+                    FullScreenMediaView(mediaUrl: media.url.absoluteString) 
                 }
             }
             .alert(isPresented: Binding<Bool>(
@@ -232,6 +241,7 @@ struct SearchView: View {
                 isLiked: false, // You would need to check this from a service
                 onLike: {}, // Implement these handlers
                 onComment: { showCommentsForItem(beta) },
+                onMediaTap: { media in handleMediaTap(media) },
                 onDelete: nil,
                 onAuthorTapped: { navigateToUserProfile = $0 }
             )
@@ -247,6 +257,7 @@ struct SearchView: View {
                 isLiked: false, // You would need to check this from a service
                 onLike: {}, // Implement these handlers
                 onComment: { showCommentsForItem(event) },
+                onMediaTap: { media in handleMediaTap(media) },
                 onDelete: nil,
                 onAuthorTapped: { navigateToUserProfile = $0 }
             )
@@ -309,6 +320,11 @@ struct SearchView: View {
     private func showCommentsForItem(_ item: any ActivityItem) {
         selectedItemForComments = item
         showingComments = true
+    }
+    
+    private func handleMediaTap(_ media: Media) {
+        selectedMedia = media
+        showFullScreenMedia = true
     }
     
     private func getItemType(from item: any ActivityItem) -> String {

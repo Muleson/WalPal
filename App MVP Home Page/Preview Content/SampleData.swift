@@ -141,12 +141,50 @@ struct SampleData {
     
     // MARK: - Sample Activity Items
     
+    static func createSampleMedia() -> Media {
+        // Default to creating an image if no type specified
+        return createSampleMediaItem(type: .image, id: UUID().uuidString)
+    }
+    
+    // Add the new version that takes type and id parameters
+    static func createSampleMediaItem(type: MediaType, id: String) -> Media {
+        switch type {
+        case .image:
+            return Media(
+                id: id,
+                url: URL(string: "https://example.com/sample-image.jpg")!,
+                type: .image,
+                thumbnailURL: URL(string: "https://example.com/sample-thumbnail.jpg"),
+                uploadedAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
+                ownerId: previewUser.id
+            )
+        case .video:
+            return Media(
+                id: id,
+                url: URL(string: "https://example.com/sample-video.mp4")!,
+                type: .video,
+                thumbnailURL: URL(string: "https://example.com/sample-video-thumbnail.jpg"),
+                uploadedAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
+                ownerId: previewUser.id
+            )
+        case .none:
+            return Media(
+                id: id,
+                url: URL(string: "https://example.com/placeholder.jpg")!,
+                type: .none,
+                thumbnailURL: nil,
+                uploadedAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
+                ownerId: previewUser.id
+            )
+        }
+    }
+
     static func createSampleBasicPost() -> BasicPost {
         return BasicPost(
             id: "preview-basic-1",
             author: previewUser,
             content: "Just had an amazing session at the gym today! Finally sent that V5 project I've been working on for weeks.",
-            mediaURL: URL(string: "https://example.com/climb.jpg"),
+            mediaItems: [createSampleMedia()],
             createdAt: Date().addingTimeInterval(-3600 * 3), // 3 hours ago
             likeCount: 15,
             commentCount: 4,
@@ -159,7 +197,7 @@ struct SampleData {
             id: "preview-beta-1",
             author: previewUsers[1],
             content: "For the red dyno problem on the west wall, the key is to flag with your right foot and generate momentum from your hips rather than just your arms.",
-            mediaURL: URL(string: "https://example.com/beta.jpg"),
+            mediaItems: [createSampleMedia()],
             createdAt: Date().addingTimeInterval(-3600 * 12), // 12 hours ago
             likeCount: 28,
             commentCount: 7,
@@ -175,7 +213,7 @@ struct SampleData {
             author: previewUsers[0],
             title: "Spring Climbing Competition",
             description: "Join us for our annual spring competition with categories for all skill levels. Prizes from local sponsors!",
-            mediaURL: URL(string: "https://example.com/event.jpg"),
+            mediaItems: [createSampleMedia()],
             createdAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
             likeCount: 42,
             commentCount: 9,

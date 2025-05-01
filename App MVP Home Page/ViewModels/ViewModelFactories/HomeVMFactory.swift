@@ -35,7 +35,7 @@ class PreviewHomeViewModelFactory: HomeViewModelFactory {
                 author: SampleData.previewUser,
                 title: "Bouldering Competition",
                 description: "Annual bouldering competition with prizes!",
-                mediaURL: URL(string: "https://example.com/event1.jpg"),
+                mediaItems: [SampleData.createSampleMediaItem(type: .image, id: "event1-image")],
                 createdAt: Date().addingTimeInterval(-86400 * 2), // 2 days ago
                 likeCount: 24,
                 commentCount: 7,
@@ -51,7 +51,7 @@ class PreviewHomeViewModelFactory: HomeViewModelFactory {
                 author: SampleData.previewUser,
                 title: "Beginner Workshop",
                 description: "Learn the basics of climbing",
-                mediaURL: nil,
+                mediaItems: [],
                 createdAt: Date().addingTimeInterval(-86400 * 1), // 1 day ago
                 likeCount: 12,
                 commentCount: 3,
@@ -70,7 +70,7 @@ class PreviewHomeViewModelFactory: HomeViewModelFactory {
                 id: "beta1",
                 author: SampleData.previewUser,
                 content: "Here's how to solve the tricky overhang on the red route",
-                mediaURL: URL(string: "https://example.com/beta1.jpg"),
+                mediaItems: [SampleData.createSampleMediaItem(type: .video, id: "beta1-video")],
                 createdAt: Date().addingTimeInterval(-3600 * 5), // 5 hours ago
                 likeCount: 18,
                 commentCount: 6,
@@ -82,7 +82,7 @@ class PreviewHomeViewModelFactory: HomeViewModelFactory {
                 id: "beta2",
                 author: SampleData.previewUser,
                 content: "Footwork technique for the yellow V4",
-                mediaURL: nil,
+                mediaItems: [],
                 createdAt: Date().addingTimeInterval(-3600 * 12), // 12 hours ago
                 likeCount: 11,
                 commentCount: 2,
