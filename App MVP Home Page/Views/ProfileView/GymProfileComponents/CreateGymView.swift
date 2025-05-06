@@ -50,7 +50,7 @@ struct CreateGymView: View {
             }
         }
         .sheet(isPresented: $viewModel.isImagePickerPresented) {
-            ImagePicker(selectedImage: $viewModel.selectedImage)
+            ImagePicker(selectedImage: $viewModel.selectedImage, sourceType: .photoLibrary)
         }
     }
 }

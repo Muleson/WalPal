@@ -280,7 +280,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "App-MVP-Home-Page-Info.plist";
-				INFOPLIST_KEY_NSCameraUsageDescription = "We need permission to access your devices camera to scan your pass.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Wallpal need permission to access your devices camera to scan your pass.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WallPal needs microphone access to record videos with sound for your activities";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "WallPal needs permission to save media to your photo library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -312,7 +314,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "App-MVP-Home-Page-Info.plist";
-				INFOPLIST_KEY_NSCameraUsageDescription = "We need permission to access your devices camera to scan your pass.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Wallpal need permission to access your devices camera to scan your pass.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WallPal needs microphone access to record videos with sound for your activities";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "WallPal needs permission to save media to your photo library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

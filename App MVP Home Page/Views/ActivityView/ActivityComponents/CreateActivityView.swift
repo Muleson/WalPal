@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import PhotosUI
+import AVKit
 
 struct CreateActivityView: View {
     @Environment(\.dismiss) private var dismiss
@@ -46,6 +48,11 @@ struct CreateActivityView: View {
                 case .event:
                     eventPostSection
                 }
+                
+                // Media preview section if media is selected
+                if !viewModel.selectedImages.isEmpty || !viewModel.selectedVideos.isEmpty {
+                    mediaPreviewSection
+                }
             }
             .navigationTitle("Share \(viewModel.selectedType.rawValue)")
             .navigationBarTitleDisplayMode(.inline)
@@ -75,8 +82,25 @@ struct CreateActivityView: View {
             }
             .overlay {
                 if viewModel.isLoading {
-                    ProgressView()
-                        .background(Color.black.opacity(0.2))
+                    VStack {
+                        ProgressView()
+                        if viewModel.uploadProgress > 0 {
+                            Text("\(Int(viewModel.uploadProgress * 100))%")
+                                .padding(.top, 8)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.2))
+                }
+            }
+            .sheet(isPresented: $viewModel.showMediaPicker) {
+                MediaPickerView(
+                    selectedImages: $viewModel.selectedImages,
+                    selectedVideos: $viewModel.selectedVideos
+                )
+                .onDisappear {
+                    // Generate thumbnails when media picker is dismissed
+                    viewModel.generateVideoThumbnails()
                 }
             }
         }
@@ -133,10 +157,75 @@ struct CreateActivityView: View {
     
     private var mediaSelector: some View {
         Button {
-            // In a real app, this would open a media picker
             viewModel.showMediaPicker = true
         } label: {
             Label("Add Photo or Video", systemImage: "photo")
+        }
+    }
+    
+    // MARK: - Media Preview
+    
+    private var mediaPreviewSection: some View {
+        Section(header: Text("Media Preview")) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    // Show selected images
+                    ForEach(viewModel.selectedImages.indices, id: \.self) { index in
+                        VStack {
+                            Image(uiImage: viewModel.selectedImages[index])
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            
+                            Button(action: {
+                                viewModel.selectedImages.remove(at: index)
+                            }) {
+                                Text("Remove")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    }
+                    
+                    // Show video thumbnails if available
+                    ForEach(viewModel.selectedVideos.indices, id: \.self) { index in
+                        VStack {
+                            ZStack {
+                                if index < viewModel.videoThumbnails.count {
+                                    Image(uiImage: viewModel.videoThumbnails[index])
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 100, height: 100)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                } else {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(width: 100, height: 100)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                                
+                                Image(systemName: "play.circle")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.white)
+                            }
+                            
+                            Button(action: {
+                                viewModel.selectedVideos.remove(at: index)
+                                // If we have thumbnails, also remove the corresponding thumbnail
+                                if index < viewModel.videoThumbnails.count {
+                                    viewModel.videoThumbnails.remove(at: index)
+                                }
+                            }) {
+                                Text("Remove")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
         }
     }
     

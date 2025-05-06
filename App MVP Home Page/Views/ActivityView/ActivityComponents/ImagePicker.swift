@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVKit
+import AVFoundation
 import PhotosUI
 
 struct MediaPickerView: View {
@@ -44,7 +45,14 @@ struct MediaPickerView: View {
                     
                     ForEach(selectedVideos.indices, id: \.self) { index in
                         ZStack {
-                            Color.black
+                            if let thumbnail = selectedVideos[index].videoThumbnail() {
+                                Image(uiImage: thumbnail)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                Color.black
+                            }
+                            
                             Image(systemName: "play.fill")
                                 .font(.system(size: 30))
                                 .foregroundColor(.white)
@@ -127,7 +135,13 @@ struct MediaPickerView: View {
             )
         }
         .sheet(isPresented: $isPhotoLibraryPresented) {
-            PHPickerView(selectedImages: $selectedImages, selectedVideos: $selectedVideos)
+            PHPickerView(
+                selectedImages: $selectedImages, 
+                selectedVideos: $selectedVideos,
+                onComplete: {
+                    print("Selection complete. Final counts - Images: \(selectedImages.count), Videos: \(selectedVideos.count)")
+                }
+            )
         }
         .sheet(isPresented: $isVideoCameraPresented) {
             VideoPicker(selectedVideo: Binding(
@@ -141,16 +155,28 @@ struct MediaPickerView: View {
 struct PHPickerView: UIViewControllerRepresentable {
     @Binding var selectedImages: [UIImage]
     @Binding var selectedVideos: [URL]
+    var onComplete: (() -> Void)? = nil
     
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
         var parent: PHPickerView
+        var pendingOperations = 0
         
         init(parent: PHPickerView) {
             self.parent = parent
         }
         
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
+            // Don't dismiss immediately if we have video operations
+            let hasVideoOperations = results.contains { 
+                $0.itemProvider.hasItemConformingToTypeIdentifier(UTType.movie.identifier)
+            }
+            
+            if !hasVideoOperations {
+                picker.dismiss(animated: true)
+            }
+            
+            // Track number of pending operations
+            pendingOperations = results.count
             
             for result in results {
                 let itemProvider = result.itemProvider
@@ -160,23 +186,65 @@ struct PHPickerView: UIViewControllerRepresentable {
                         if let image = image as? UIImage {
                             DispatchQueue.main.async {
                                 self?.parent.selectedImages.append(image)
+                                self?.operationCompleted(picker: picker)
                             }
+                        } else {
+                            self?.operationCompleted(picker: picker)
                         }
                     }
                 } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                    print("Starting to load video from library")
                     itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { [weak self] url, error in
-                        if let url = url {
-                            // Create a local copy of the video
-                            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-                            let localURL = documentsDirectory.appendingPathComponent(url.lastPathComponent)
+                        guard let url = url else { 
+                            print("Failed to load video URL")
+                            self?.operationCompleted(picker: picker)
+                            return 
+                        }
+                        
+                        print("Got temporary URL: \(url.path)")
+                        
+                        do {
+                            let localURL = FileManager.default.secureVideoURL()
+                            print("Will save to: \(localURL.path)")
                             
-                            try? FileManager.default.copyItem(at: url, to: localURL)
+                            // Copy without attempting bookmark creation
+                            try FileManager.default.copyItem(at: url, to: localURL)
+                            print("Video successfully copied")
                             
                             DispatchQueue.main.async {
-                                self?.parent.selectedVideos.append(localURL)
+                                var updatedVideos = self?.parent.selectedVideos ?? []
+                                updatedVideos.append(localURL)
+                                self?.parent.selectedVideos = updatedVideos
+                                print("Added video to array, count now: \(updatedVideos.count)")
+                                self?.operationCompleted(picker: picker)
                             }
+                        } catch {
+                            print("Error copying video: \(error.localizedDescription)")
+                            self?.operationCompleted(picker: picker)
                         }
                     }
+                } else {
+                    // Item not processable, count it as completed
+                    self.operationCompleted(picker: picker)
+                }
+            }
+            
+            // If no results, dismiss immediately
+            if results.isEmpty {
+                picker.dismiss(animated: true)
+                parent.onComplete?()
+            }
+        }
+        
+        private func operationCompleted(picker: PHPickerViewController) {
+            pendingOperations -= 1
+            print("Operation completed, \(pendingOperations) remaining")
+            
+            // When all operations are complete, dismiss the picker
+            if pendingOperations <= 0 {
+                DispatchQueue.main.async {
+                    picker.dismiss(animated: true)
+                    self.parent.onComplete?()
                 }
             }
         }
@@ -203,34 +271,40 @@ struct PHPickerView: UIViewControllerRepresentable {
 
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var selectedImage: UIImage?
-    var sourceType: UIImagePickerController.SourceType = .photoLibrary
+    @Environment(\.presentationMode) var presentationMode
     
-    @Environment(\.presentationMode) private var presentationMode
-
-    func makeUIViewController(context: UIViewControllerRepresentableContext<ImagePicker>) -> UIImagePickerController {
-        let imagePicker = UIImagePickerController()
-        imagePicker.sourceType = sourceType
-        imagePicker.delegate = context.coordinator
-        return imagePicker
+    var sourceType: UIImagePickerController.SourceType
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.allowsEditing = true
+        picker.sourceType = sourceType
+        return picker
     }
     
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: UIViewControllerRepresentableContext<ImagePicker>) {}
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
+        // No updates needed
+    }
     
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
     
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        var parent: ImagePicker
+        let parent: ImagePicker
         
         init(_ parent: ImagePicker) {
             self.parent = parent
         }
         
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.selectedImage = image
+            if let editedImage = info[.editedImage] as? UIImage {
+                parent.selectedImage = editedImage
+            } else if let originalImage = info[.originalImage] as? UIImage {
+                parent.selectedImage = originalImage
             }
+            
             parent.presentationMode.wrappedValue.dismiss()
         }
         
@@ -269,13 +343,8 @@ struct VideoPicker: UIViewControllerRepresentable {
         }
         
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let videoURL = info[.mediaURL] as? URL {
-                // Create a local copy of the video
-                let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-                let localURL = documentsDirectory.appendingPathComponent(videoURL.lastPathComponent)
-                
-                try? FileManager.default.copyItem(at: videoURL, to: localURL)
-                parent.selectedVideo = localURL
+            if let mediaURL = info[.mediaURL] as? URL {
+                parent.selectedVideo = mediaURL
             }
             
             parent.presentationMode.wrappedValue.dismiss()
@@ -286,3 +355,39 @@ struct VideoPicker: UIViewControllerRepresentable {
         }
     }
 }
+
+extension URL {
+    func videoThumbnail() -> UIImage? {
+        let asset = AVURLAsset(url: self)
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.appliesPreferredTrackTransform = true
+        
+        do {
+            let cgImage = try imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: 60), actualTime: nil)
+            return UIImage(cgImage: cgImage)
+        } catch {
+            print("Error generating video thumbnail: \(error)")
+            return nil
+        }
+    }
+}
+
+extension FileManager {
+    func secureVideoURL() -> URL {
+        // Create a directory for videos if needed
+        let videoDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Videos", isDirectory: true)
+        
+        // Create the directory if it doesn't exist
+        if !FileManager.default.fileExists(atPath: videoDirectory.path) {
+            try? FileManager.default.createDirectory(at: videoDirectory, withIntermediateDirectories: true)
+        }
+        
+        // Generate a unique filename with UUID
+        let uniqueFilename = UUID().uuidString + ".mov"
+        let fileURL = videoDirectory.appendingPathComponent(uniqueFilename)
+        
+        return fileURL
+    }
+}
+

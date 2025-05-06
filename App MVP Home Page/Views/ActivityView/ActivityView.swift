@@ -258,6 +258,23 @@ struct ActivityView: View {
             .fullScreenCover(isPresented: $showFullScreenMedia) {
                 if let media = selectedMedia {
                     FullScreenMediaView(mediaUrl: media.url.absoluteString)
+                        .onAppear {
+                            print("FullScreenMediaView appeared with URL: \(media.url.absoluteString)")
+                        }
+                        .onDisappear {
+                            print("FullScreenMediaView disappeared")
+                        }
+                } else {
+                    // Safety fallback
+                    Text("No media selected")
+                        .background(Color.black)
+                        .onAppear {
+                            print("FullScreenMediaView appeared without valid media")
+                            // Auto-dismiss after a delay if no media
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                showFullScreenMedia = false
+                            }
+                        }
                 }
             }
             .navigationDestination(isPresented: $showCreateContent) {
@@ -463,8 +480,22 @@ struct ActivityView: View {
     }
     
     private func handleMediaTap(_ media: Media) {
+        print("Media tapped in ActivityView: \(media.url)")
+        
+        // Validate URL before setting
+        guard !media.url.absoluteString.isEmpty else {
+            print("Error: Empty media URL")
+            return
+        }
+        
+        // Set the selected media and trigger the fullScreenCover
         selectedMedia = media
-        showFullScreenMedia = true
+        
+        // Add a slight delay to ensure any conflicting animations complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            print("Presenting FullScreenMediaView with URL: \(media.url)")
+            showFullScreenMedia = true
+        }
     }
     
     private func getItemType(from item: any ActivityItem) -> String {

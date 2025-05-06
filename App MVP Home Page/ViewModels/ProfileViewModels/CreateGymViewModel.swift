@@ -43,6 +43,8 @@ class CreateGymViewModel: ObservableObject {
     @Published var isComplete = false
     
     private let gymService = GymService()
+    private let mediaStorageService = MediaStorageService()
+
     
     var isFormValid: Bool {
         !name.isEmpty && !email.isEmpty && !location.isEmpty && !selectedClimbingTypes.isEmpty
@@ -102,18 +104,21 @@ class CreateGymViewModel: ObservableObject {
         isLoading = true
         
         do {
+            // Generate gym ID first
+            let gymId = UUID().uuidString
+            
             // Combine selected amenities (both common and custom)
             let allAmenities = Array(selectedAmenities)
             
             // Upload image if available
             var imageUrl: URL? = nil
             if let image = selectedImage {
-                imageUrl = try await uploadImage(image: image, gymName: name)
+                imageUrl = try await uploadImage(image: image, gymId: gymId)
             }
             
-            // Create a new gym
+            // Create a new gym using the same ID
             let newGym = Gym(
-                id: UUID().uuidString,
+                id: gymId,
                 email: email,
                 name: name,
                 description: description.isEmpty ? nil : description,
@@ -133,7 +138,7 @@ class CreateGymViewModel: ObservableObject {
             let admin = GymAdministrator(
                 id: adminId,
                 userId: ownerId,
-                gymId: newGym.id,
+                gymId: gymId,
                 role: .owner,
                 addedAt: Date(),
                 addedBy: ownerId
@@ -152,25 +157,9 @@ class CreateGymViewModel: ObservableObject {
         }
     }
     
-    private func uploadImage(image: UIImage, gymName: String) async throws -> URL {
-        // Your existing upload image implementation
-        guard let imageData = image.jpegData(compressionQuality: 0.7) else {
-            throw NSError(domain: "GymImageUpload", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])
-        }
-        
-        // Create a unique filename
-        let storageRef = Storage.storage().reference()
-        let filename = "gym_logo_\(UUID().uuidString).jpg"
-        let gymImagesRef = storageRef.child("gym_images/\(filename)")
-        
-        // Upload the image
-        let metadata = StorageMetadata()
-        metadata.contentType = "image/jpeg"
-        
-        _ = try await gymImagesRef.putDataAsync(imageData, metadata: metadata)
-        let downloadURL = try await gymImagesRef.downloadURL()
-        
-        return downloadURL
+    private func uploadImage(image: UIImage, gymId: String) async throws -> URL {
+        let media = try await mediaStorageService.uploadGymImage(image, gymId: gymId)
+        return media.url
     }
     
     private func createGymAdministrator(admin: GymAdministrator) async throws {

@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import AVKit
 
 enum ActivityType: String, CaseIterable {
     case basic = "Basic Post"
@@ -47,21 +48,64 @@ class CreateActivityViewModel: ObservableObject {
     @Published var uploadProgress: Double = 0
     @Published var mediaItems: [Media] = []
     
+    // Add video thumbnail support for previewing in UI
+    @Published var videoThumbnails: [UIImage] = []
+    
     private let mediaStorageService = MediaStorageService()
     private let activityRepository = ActivityRepositoryService()
     private var _preselectedGym: Gym?
 
-    
     // MARK: - Validation
     
     var isFormValid: Bool {
         switch selectedType {
         case .basic:
-            return !content.isEmpty
+            return !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || 
+                   !selectedImages.isEmpty || 
+                   !selectedVideos.isEmpty
         case .beta:
-            return !content.isEmpty && !selectedGymId.isEmpty
+            return !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && 
+                  !selectedGymId.isEmpty
         case .event:
-            return !eventTitle.isEmpty && !eventLocation.isEmpty
+            return !eventTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && 
+                  !eventLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                   eventDate > Date()
+        }
+    }
+    
+    // MARK: - Media Handling
+    
+    // Generate thumbnails when videos are added
+    func generateVideoThumbnails() {
+        // Clear existing thumbnails that might be outdated
+        videoThumbnails = []
+        
+        for videoURL in selectedVideos {
+            generateThumbnail(from: videoURL) { [weak self] thumbnail in
+                if let thumbnail = thumbnail {
+                    DispatchQueue.main.async {
+                        self?.videoThumbnails.append(thumbnail)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func generateThumbnail(from videoURL: URL, completion: @escaping (UIImage?) -> Void) {
+        DispatchQueue.global().async {
+            let asset = AVURLAsset(url: videoURL)
+            let imageGenerator = AVAssetImageGenerator(asset: asset)
+            imageGenerator.appliesPreferredTrackTransform = true
+            
+            do {
+                // Get thumbnail at 1 second
+                let cgImage = try imageGenerator.copyCGImage(at: CMTime(seconds: 1, preferredTimescale: 60), actualTime: nil)
+                let thumbnail = UIImage(cgImage: cgImage)
+                completion(thumbnail)
+            } catch {
+                print("Error generating thumbnail: \(error.localizedDescription)")
+                completion(nil)
+            }
         }
     }
     
@@ -110,7 +154,17 @@ class CreateActivityViewModel: ObservableObject {
             uploadProgress = Double(mediaItems.count) / Double(selectedImages.count + selectedVideos.count)
             
             do {
-                let media = try await mediaStorageService.uploadImage(image, ownerId: authorId)
+                // Use the appropriate upload method based on activity type
+                let media: Media
+                switch selectedType {
+                case .basic:
+                    media = try await mediaStorageService.uploadImage(image, ownerId: authorId)
+                case .beta:
+                    media = try await mediaStorageService.uploadBetaMedia(image, userId: authorId)
+                case .event:
+                    media = try await mediaStorageService.uploadEventImage(image, eventId: authorId)
+                }
+                
                 await MainActor.run {
                     mediaItems.append(media)
                 }
@@ -193,7 +247,6 @@ class CreateActivityViewModel: ObservableObject {
     
     @MainActor
     func loadGyms() async {
-    
         isLoadingGyms = true
         
         let gymService = GymService()
@@ -229,5 +282,34 @@ class CreateActivityViewModel: ObservableObject {
                 selectedGymId = gym.id
             }
         }
+    }
+    
+    // Add helper method for video thumbnail access by index
+    func videoThumbnail(at index: Int) -> UIImage? {
+        guard index < videoThumbnails.count else { return nil }
+        return videoThumbnails[index]
+    }
+    
+    // Reset all state when the view disappears or is dismissed
+    func reset() {
+        // Clear media
+        selectedImages = []
+        selectedVideos = []
+        videoThumbnails = []
+        mediaItems = []
+        uploadProgress = 0
+        
+        // Reset common fields
+        content = ""
+        mediaURL = nil
+        
+        // Reset specific fields
+        difficulty = ""
+        routeName = ""
+        eventTitle = ""
+        eventDescription = ""
+        eventDate = Date()
+        eventLocation = ""
+        maxAttendees = 10
     }
 }
